@@ -1,0 +1,91 @@
+cmake_minimum_required(VERSION 3.20)
+project(OpenMirrorPhone VERSION 0.1.0 LANGUAGES C CXX RC)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_C_STANDARD 11)
+
+if(NOT WIN32)
+  message(FATAL_ERROR "OpenMirrorPhone targets Windows (MSYS2 UCRT64 toolchain).")
+endif()
+
+find_package(PkgConfig REQUIRED)
+# Static libcrypto: the AirPlay core passes FILE* to PEM_read_PrivateKey, which
+# aborts with "no OPENSSL_Applink" when libcrypto is a separate DLL.
+set(OPENSSL_USE_STATIC_LIBS ON)
+find_package(OpenSSL 1.1.1 REQUIRED)
+pkg_check_modules(PLIST REQUIRED IMPORTED_TARGET libplist-2.0>=2.3.0)
+pkg_check_modules(FFMPEG REQUIRED IMPORTED_TARGET libavformat libavcodec libavutil libswresample)
+pkg_check_modules(SDL2 REQUIRED IMPORTED_TARGET sdl2 SDL2_ttf)
+
+# ---------------------------------------------------------------------------
+# AirPlay core, vendored from UxPlay (GPLv3). See third_party/airplay/VERSION.
+# ---------------------------------------------------------------------------
+set(AP ${CMAKE_SOURCE_DIR}/third_party/airplay)
+
+file(GLOB LLHTTP_SRC ${AP}/llhttp/*.c)
+add_library(llhttp STATIC ${LLHTTP_SRC})
+target_include_directories(llhttp PUBLIC ${AP}/llhttp)
+
+file(GLOB PLAYFAIR_SRC ${AP}/playfair/*.c)
+add_library(playfair STATIC ${PLAYFAIR_SRC})
+target_include_directories(playfair PUBLIC ${AP}/playfair)
+
+# Service discovery goes through the Bonjour service already running on
+# Windows: dns_sd.c loads dnssd.dll at runtime, so only the header is needed.
+add_library(dnssd STATIC ${AP}/dns_sd/dns_sd.c)
+target_include_directories(dnssd PRIVATE ${CMAKE_SOURCE_DIR}/third_party/bonjour ${AP})
+
+file(GLOB AIRPLAY_SRC ${AP}/*.c)
+add_library(airplay STATIC ${AIRPLAY_SRC})
+target_include_directories(airplay PUBLIC ${AP})
+target_compile_definitions(airplay PUBLIC
+  STANDALONE TARGET_POSIX _REENTRANT NOHOLD PLIST_210 PLIST_230
+  OPENSSL_API_COMPAT=0x10101000L)
+target_link_libraries(airplay PUBLIC
+  playfair dnssd llhttp PkgConfig::PLIST OpenSSL::Crypto
+  pthread ws2_32 wsock32 iphlpapi)
+
+foreach(t llhttp playfair dnssd airplay)
+  target_compile_options(${t} PRIVATE -O2 -w)
+endforeach()
+
+# ---------------------------------------------------------------------------
+# OpenMirrorPhone application
+# ---------------------------------------------------------------------------
+add_executable(openmirrorphone
+  src/main.cpp
+  src/receiver.cpp
+  src/recorder.cpp
+  src/video_decoder.cpp
+  src/audio_player.cpp
+  src/network.cpp
+  src/settings.cpp
+  src/settings_dialog.cpp
+  src/sessions.cpp
+  src/updater.cpp
+  src/update_dialog.cpp
+  src/welcome_dialog.cpp
+  src/app.rc
+)
+# The updater looks for releases of this GitHub repository.
+set(OPENMIRRORPHONE_GITHUB_REPO "ImElio/openmirrorphone" CACHE STRING "GitHub owner/repo checked for updates")
+# The Welcome window's PayPal button opens this page.
+set(OPENMIRRORPHONE_DONATE_URL "https://paypal.me/CallMeElio" CACHE STRING "Donation link")
+target_compile_definitions(openmirrorphone PRIVATE
+  $<$<COMPILE_LANGUAGE:CXX>:OMP_VERSION="${PROJECT_VERSION}">
+  $<$<COMPILE_LANGUAGE:CXX>:OMP_GITHUB_REPO="${OPENMIRRORPHONE_GITHUB_REPO}">
+  $<$<COMPILE_LANGUAGE:CXX>:OMP_DONATE_URL="${OPENMIRRORPHONE_DONATE_URL}">)
+# app.rc includes app.manifest and the icons; rebuild it when they change.
+set_source_files_properties(src/app.rc PROPERTIES OBJECT_DEPENDS
+  "${CMAKE_SOURCE_DIR}/src/app.manifest;${CMAKE_SOURCE_DIR}/src/resource.h;${CMAKE_SOURCE_DIR}/assets/logo.ico;${CMAKE_SOURCE_DIR}/assets/paypal-donate.png")
+target_compile_options(openmirrorphone PRIVATE -O2 -Wall -Wextra)
+target_link_libraries(openmirrorphone PRIVATE
+  airplay PkgConfig::FFMPEG PkgConfig::SDL2 PkgConfig::PLIST iphlpapi ws2_32 ole32 uuid comctl32 shell32 winhttp windowscodecs msimg32)
+# Static runtime so the exe only needs the FFmpeg/SDL/OpenSSL DLLs next to it.
+target_link_options(openmirrorphone PRIVATE -static-libgcc -static-libstdc++)
+# sdl2.pc adds -mwindows; keep a console for the log unless OPENMIRRORPHONE_GUI is set.
+option(OPENMIRRORPHONE_GUI "Build without a console window" OFF)
+if(NOT OPENMIRRORPHONE_GUI)
+  target_link_options(openmirrorphone PRIVATE -mconsole)
+endif()

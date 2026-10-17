@@ -1,0 +1,111 @@
+// Windows resources for OpenMirrorPhone.exe: icon, manifest, menu bar, Settings
+// dialog and version info. SDL uses the first icon for the window and taskbar.
+#include <windows.h>
+#include <commctrl.h>
+#include "resource.h"
+
+1 ICON "../assets/logo.ico"
+1 24 "app.manifest" // RT_MANIFEST
+PAYPAL_PNG RCDATA "../assets/paypal-donate.png" // Welcome window's donate button
+
+IDR_MAIN_MENU MENU
+BEGIN
+  POPUP "&Settings"
+  BEGIN
+    MENUITEM "&Settings...\tCtrl+,",       IDM_SETTINGS
+    MENUITEM SEPARATOR
+    MENUITEM "&Full screen\tF11",          IDM_FULLSCREEN
+    MENUITEM "Start/stop &recording\tR",   IDM_RECORD
+    MENUITEM "Open recordings f&older",    IDM_FOLDER
+    MENUITEM SEPARATOR
+    MENUITEM "E&xit\tAlt+F4",              IDM_EXIT
+  END
+  POPUP "&Help"
+  BEGIN
+    MENUITEM "Check for &updates...",      IDM_CHECK_UPDATES
+    MENUITEM "&What's New",                IDM_WHATS_NEW
+    MENUITEM SEPARATOR
+    MENUITEM "&Support OpenMirrorPhone...", IDM_DONATE
+    MENUITEM "&About OpenMirrorPhone",     IDM_ABOUT
+  END
+END
+
+IDD_SETTINGS DIALOGEX 0, 0, 400, 320
+STYLE DS_SHELLFONT | DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Settings"
+FONT 9, "Segoe UI", 400, 0, 1
+BEGIN
+  GROUPBOX      "Receiver", -1, 7, 7, 386, 62
+  LTEXT         "Name shown in Screen Mirroring on your iPhone, iPad or Mac:", -1, 15, 20, 300, 9
+  EDITTEXT      IDC_NAME, 15, 32, 305, 14, ES_AUTOHSCROLL
+  DEFPUSHBUTTON "&Apply", IDC_APPLY, 326, 31, 60, 15
+  LTEXT         "Changing the name disconnects the device that is mirroring now.", IDC_NAME_NOTE, 15, 52, 370, 9
+
+  GROUPBOX      "Session history", -1, 7, 75, 386, 182
+  CONTROL       "", IDC_SESSIONS, "SysListView32",
+                LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_EDITLABELS | WS_BORDER | WS_TABSTOP,
+                15, 88, 370, 142
+  PUSHBUTTON    "Re&name", IDC_RENAME, 15, 236, 60, 15
+  PUSHBUTTON    "&Play recording", IDC_PLAY, 79, 236, 70, 15
+  PUSHBUTTON    "&Delete", IDC_DELETE, 153, 236, 60, 15
+  PUSHBUTTON    "Open recordings &folder", IDC_FOLDER, 285, 236, 100, 15
+
+  GROUPBOX      "Updates", -1, 7, 263, 386, 30
+  AUTOCHECKBOX  "Check for updates on GitHub when OpenMirrorPhone starts", IDC_AUTO_UPDATE, 15, 276, 300, 10
+
+  PUSHBUTTON    "Close", IDCANCEL, 333, 299, 60, 15
+END
+
+IDD_UPDATE DIALOGEX 0, 0, 320, 230
+STYLE DS_SHELLFONT | DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Update available"
+FONT 9, "Segoe UI", 400, 0, 1
+BEGIN
+  LTEXT         "", IDC_UPD_TITLE, 7, 8, 306, 18
+  EDITTEXT      IDC_UPD_NOTES, 7, 28, 306, 160,
+                ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL | WS_VSCROLL | WS_TABSTOP
+  CONTROL       "", IDC_UPD_PROGRESS, "msctls_progress32", 0, 7, 192, 306, 10
+  PUSHBUTTON    "&Skip this version", IDC_UPD_SKIP, 7, 208, 75, 15
+  PUSHBUTTON    "&Later", IDCANCEL, 177, 208, 60, 15
+  DEFPUSHBUTTON "&Install and restart", IDOK, 241, 208, 72, 15
+END
+
+IDD_WELCOME DIALOGEX 0, 0, 290, 186
+STYLE DS_SHELLFONT | DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "" // the bold heading inside already says it
+FONT 9, "Segoe UI", 400, 0, 1
+BEGIN
+  LTEXT         "Welcome to OpenMirrorPhone!", IDC_WELCOME_TITLE, 12, 10, 266, 14
+  LTEXT         "OpenMirrorPhone is completely free. There are no paid features, no ads and no time limits: everything is included, and it will stay that way.",
+                -1, 12, 30, 266, 18
+  LTEXT         "To get started, open Control Center on your iPhone or iPad, tap Screen Mirroring and choose this PC.",
+                -1, 12, 54, 266, 18
+  LTEXT         "If you find it useful and would like to support its development, you can make a donation with PayPal. Thank you!",
+                -1, 12, 78, 266, 18
+  CONTROL       "Donate with PayPal", IDC_DONATE, "Button", BS_OWNERDRAW | WS_TABSTOP, 75, 100, 140, 44
+  DEFPUSHBUTTON "Get started", IDOK, 211, 162, 67, 15
+END
+
+VS_VERSION_INFO VERSIONINFO
+FILEVERSION     0,1,0,0
+PRODUCTVERSION  0,1,0,0
+FILEOS          VOS_NT_WINDOWS32
+FILETYPE        VFT_APP
+BEGIN
+  BLOCK "StringFileInfo"
+  BEGIN
+    BLOCK "040904B0"
+    BEGIN
+      VALUE "ProductName",      "OpenMirrorPhone"
+      VALUE "FileDescription",  "OpenMirrorPhone - screen mirroring receiver"
+      VALUE "FileVersion",      "0.1.0"
+      VALUE "ProductVersion",   "0.1.0"
+      VALUE "OriginalFilename", "OpenMirrorPhone.exe"
+      VALUE "LegalCopyright",   "GPLv3"
+    END
+  END
+  BLOCK "VarFileInfo"
+  BEGIN
+    VALUE "Translation", 0x0409, 1200
+  END
+END

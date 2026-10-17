@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="164" height="314" viewBox="0 0 164 314">
+  <!-- Side image of the installer's Welcome and Finish pages. package.sh renders it,
+       draws assets/icons/icon_128.png at (30, 92) size 104 on top, and saves welcome.bmp. -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#1A2746"/>
+      <stop offset="1" stop-color="#0D1424"/>
+    </linearGradient>
+  </defs>
+  <rect width="164" height="314" fill="url(#bg)"/>
+  <text x="82" y="228" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="700" fill="#F0F4FB">Open<tspan fill="#3FA9FF">Mirror</tspan>Phone</text>
+</svg>
