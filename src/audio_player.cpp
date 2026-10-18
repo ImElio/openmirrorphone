@@ -42,8 +42,9 @@ bool airplay_audio_codec(unsigned char ct, int *codec_id, const uint8_t **config
 AudioPlayer::AudioPlayer() = default;
 
 AudioPlayer::~AudioPlayer() {
-    if (device_) SDL_CloseAudioDevice(device_);
     std::lock_guard<std::mutex> lock(mutex_);
+    if (device_) SDL_CloseAudioDevice(device_);
+    device_ = 0;
     close_decoder_locked();
 }
 
@@ -53,12 +54,69 @@ bool AudioPlayer::open_device() {
     want.format = AUDIO_S16SYS;
     want.channels = kChannels;
     want.samples = 512;
-    device_ = SDL_OpenAudioDevice(nullptr, 0, &want, &have, 0);
+    device_ = SDL_OpenAudioDevice(device_name_.empty() ? nullptr : device_name_.c_str(), 0, &want, &have, 0);
     if (!device_) {
         std::fprintf(stderr, "[audio] cannot open output device: %s\n", SDL_GetError());
         return false;
     }
     SDL_PauseAudioDevice(device_, 0);
+    return true;
+}
+
+std::vector<std::string> AudioPlayer::output_devices() const {
+    std::vector<std::string> devices;
+    int count = SDL_GetNumAudioDevices(0);
+    for (int i = 0; i < count; ++i) {
+        const char *name = SDL_GetAudioDeviceName(i, 0);
+        if (name) devices.emplace_back(name);
+    }
+    return devices;
+}
+
+std::string AudioPlayer::output_device() const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return device_name_;
+}
+
+bool AudioPlayer::set_output_device(const std::string &name) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (name == device_name_ && device_) return true;
+
+    SDL_AudioSpec want{}, have{};
+    want.freq = kSampleRate;
+    want.format = AUDIO_S16SYS;
+    want.channels = kChannels;
+    want.samples = 512;
+    auto open = [&](const std::string &device) {
+        return SDL_OpenAudioDevice(device.empty() ? nullptr : device.c_str(), 0, &want, &have, 0);
+    };
+    SDL_AudioDeviceID next = open(name);
+    if (!next) {
+        std::string first_error = SDL_GetError();
+        if (!device_ || first_error.find("already open") == std::string::npos) {
+            std::fprintf(stderr, "[audio] cannot open output device '%s': %s\n", name.c_str(), first_error.c_str());
+            return false;
+        }
+        // Some SDL drivers (including Windows shared/exclusive endpoints and the
+        // dummy test driver) do not allow opening the same endpoint twice. Retry
+        // after closing the current output, and restore it if the new one fails.
+        std::string previous = device_name_;
+        if (device_) SDL_CloseAudioDevice(device_);
+        device_ = 0;
+        next = open(name);
+        if (!next) {
+            std::string error = SDL_GetError();
+            device_ = open(previous);
+            if (device_) SDL_PauseAudioDevice(device_, 0);
+            std::fprintf(stderr, "[audio] cannot open output device '%s': %s\n", name.c_str(), error.c_str());
+            return false;
+        }
+    }
+    SDL_PauseAudioDevice(next, 0);
+    if (device_) SDL_CloseAudioDevice(device_);
+    device_ = next;
+    device_name_ = name;
+    std::fprintf(stderr, "[audio] output device: %s\n", name.empty() ? "System default" : name.c_str());
     return true;
 }
 
@@ -99,8 +157,9 @@ bool AudioPlayer::open_decoder_locked(unsigned char ct) {
 }
 
 void AudioPlayer::play(unsigned char ct, const uint8_t *data, int size) {
-    if (!device_ || size <= 0) return;
+    if (size <= 0) return;
     std::lock_guard<std::mutex> lock(mutex_);
+    if (!device_) return;
     if (ct != ct_ && !open_decoder_locked(ct)) return;
 
     pkt_->data = const_cast<uint8_t *>(data);
@@ -138,8 +197,8 @@ void AudioPlayer::play(unsigned char ct, const uint8_t *data, int size) {
 }
 
 void AudioPlayer::flush() {
-    if (device_) SDL_ClearQueuedAudio(device_);
     std::lock_guard<std::mutex> lock(mutex_);
+    if (device_) SDL_ClearQueuedAudio(device_);
     if (ctx_) avcodec_flush_buffers(ctx_);
 }
 

@@ -2,6 +2,7 @@
 
 #include "audio_player.h"
 #include "recorder.h"
+#include "settings.h"
 #include "video_decoder.h"
 
 extern "C" {
@@ -13,11 +14,37 @@ extern "C" {
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <string>
 #include <vector>
+
+#include <objbase.h>
 
 namespace {
 
 Receiver &self(void *cls) { return *static_cast<Receiver *>(cls); }
+
+// This PC's AirPlay pairing identity: a UUID made on first run and kept in
+// settings.ini. Every UxPlay-based receiver otherwise shares one fixed value, and
+// iOS mixes them up and keeps showing a cached name.
+std::string receiver_identity() {
+    std::string id = load_setting("receiver_id");
+    if (id.size() == 36) return id;
+    GUID g;
+    CoCreateGuid(&g);
+    char buf[40];
+    std::snprintf(buf, sizeof buf, "%08lx-%04x-%04x-%02x%02x-%02x%02x%02x%02x%02x%02x",
+                  static_cast<unsigned long>(g.Data1), g.Data2, g.Data3, g.Data4[0], g.Data4[1], g.Data4[2],
+                  g.Data4[3], g.Data4[4], g.Data4[5], g.Data4[6], g.Data4[7]);
+    save_setting("receiver_id", buf);
+    return buf;
+}
+
+// The AirPlay "config seed": raised whenever the receiver's name changes, so
+// iPhones and iPads refresh what they cached about it.
+unsigned config_seed() {
+    unsigned seed = static_cast<unsigned>(std::strtoul(load_setting("config_seed").c_str(), nullptr, 10));
+    return seed ? seed : 1;
+}
 
 std::vector<char> parse_mac(const std::string &mac) {
     std::vector<char> bytes;
@@ -149,6 +176,8 @@ bool Receiver::start(const std::string &name, const std::string &mac, const std:
     dnssd_set_airplay_features(dnssd_, 4, 0);
     dnssd_set_airplay_features(dnssd_, 27, 0); // no legacy pairing: iOS skips /pair-setup, no PIN
     dnssd_set_airplay_features(dnssd_, 42, 0); // H.264 only
+    dnssd_set_pi(dnssd_, receiver_identity().c_str());
+    dnssd_set_seed(dnssd_, config_seed());
 
     raop_callbacks_t cbs;
     std::memset(&cbs, 0, sizeof cbs);
@@ -254,6 +283,7 @@ void Receiver::stop() {
 }
 
 bool Receiver::rename(const std::string &name) {
+    save_setting("config_seed", std::to_string(config_seed() + 1)); // tell devices the name changed
     stop();
     video_.reset();
     audio_.flush();

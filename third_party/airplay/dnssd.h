@@ -47,6 +47,12 @@ typedef struct dnssd_s {
 
     unsigned char pin_pw;
     void *dnssd_private;
+
+    /* OpenMirrorPhone: per-receiver pairing identity ("pi", a UUID) and config seed.
+       iOS caches receivers by identity; bumping the seed tells it that the name or
+       other settings changed. Empty pi means the UxPlay default; seed 0 is not published. */
+    char pi[40];
+    unsigned int seed;
   
 /* p2p support (macOS only) */
 #if defined(__APPLE__) && defined(UXPLAY_HAVE_APPLE_P2P)
@@ -73,6 +79,9 @@ DNSSD_API const char *dnssd_get_hw_addr(dnssd_t *dnssd, int *length);
 DNSSD_API void dnssd_set_airplay_features(dnssd_t *dnssd, int bit, int val);
 DNSSD_API uint64_t dnssd_get_airplay_features(dnssd_t *dnssd);
 DNSSD_API void dnssd_set_pk(dnssd_t *dnssd, char * pk_str);
+DNSSD_API void dnssd_set_pi(dnssd_t *dnssd, const char *pi);
+DNSSD_API const char *dnssd_get_pi(dnssd_t *dnssd);
+DNSSD_API void dnssd_set_seed(dnssd_t *dnssd, unsigned int seed);
 
 /* An external dns_sd.h library (Avahi's compat layer, Bonjour) hands each
    registered service a socket that the application must service with

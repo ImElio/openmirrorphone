@@ -2,6 +2,8 @@
 
 #include "network.h"
 #include "resource.h"
+#include "icons.h"
+#include "theme.h"
 #include "updater.h"
 
 #include <windows.h>
@@ -45,6 +47,7 @@ void start_download(HWND dlg) {
     EnableWindow(GetDlgItem(dlg, IDOK), FALSE);
     EnableWindow(GetDlgItem(dlg, IDC_UPD_SKIP), FALSE);
     set_text(dlg, IDCANCEL, "Cancel");
+    set_button_icon(dlg, IDCANCEL, Icon::Cross);
     set_text(dlg, IDC_UPD_TITLE, u8"Downloading OpenMirrorPhone " + s.version + u8"…");
     ShowWindow(GetDlgItem(dlg, IDC_UPD_PROGRESS), SW_SHOW);
 
@@ -83,6 +86,8 @@ void finish_download(HWND dlg, bool ok) {
 }
 
 INT_PTR CALLBACK update_proc(HWND dlg, UINT msg, WPARAM wp, LPARAM lp) {
+    INT_PTR brush = 0;
+    if (theme_ctlcolor(msg, wp, lp, &brush)) return brush; // light or dark theme
     switch (msg) {
     case WM_INITDIALOG: {
         SetWindowLongPtrW(dlg, DWLP_USER, lp);
@@ -105,11 +110,15 @@ INT_PTR CALLBACK update_proc(HWND dlg, UINT msg, WPARAM wp, LPARAM lp) {
             ShowWindow(GetDlgItem(dlg, IDC_UPD_SKIP), SW_HIDE);
         } else {
             SetWindowTextW(dlg, L"Update available");
+            set_button_icon(dlg, IDOK, Icon::Download);
+            set_button_icon(dlg, IDCANCEL, Icon::Clock);
+            set_button_icon(dlg, IDC_UPD_SKIP, Icon::Skip);
             set_text(dlg, IDC_UPD_TITLE, "OpenMirrorPhone " + s.version + " is available. You have version " +
                                              OMP_VERSION + ".");
         }
         // Start on the main button, so Enter installs (or closes What's New) and the
         // notes are not all selected.
+        apply_theme(dlg);
         SendMessageW(dlg, WM_NEXTDLGCTL, reinterpret_cast<WPARAM>(GetDlgItem(dlg, IDOK)), TRUE);
         return FALSE;
     }

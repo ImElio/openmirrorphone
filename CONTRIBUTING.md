@@ -42,9 +42,11 @@ There are no automated tests yet: changes are tested by hand with a real iPhone 
 
 - [ ] The PC appears in Screen Mirroring and mirroring starts
 - [ ] Sound plays, and the volume buttons on the device change it
+- [ ] Settings: changing the audio output moves the mirrored sound to that Windows device
 - [ ] Full screen with double-click and F11; Esc leaves it
 - [ ] R starts and stops a recording; the MP4 opens in VLC with picture and sound in sync
-- [ ] Settings: renaming the receiver shows the new name on the device
+- [ ] S saves a valid PNG to `Pictures\OpenMirrorPhone`
+- [ ] Settings: renaming the receiver shows the new name after reopening Screen Mirroring
 - [ ] Settings: a session can be renamed (its MP4 too) and deleted
 - [ ] Stopping mirroring on the device returns to the waiting screen
 - [ ] If you touched the updater: an update from a local feed installs and shows What's New
@@ -148,19 +150,22 @@ rebuild: `src/app.rc` embeds `logo.ico` in the exe.
 
 | Path | Contents |
 |---|---|
-| `src/main.cpp` | SDL2 window, waiting screen, menu bar, full screen, keys, main loop |
+| `src/main.cpp` | SDL2 window, waiting screen, Settings gear button, full screen, keys, main loop |
 | `src/receiver.cpp` | Starts Bonjour and the AirPlay server; receives the core's callbacks and forwards them |
 | `src/video_decoder.cpp` | H.264/H.265 decoding with FFmpeg; keeps only the newest frame |
-| `src/audio_player.cpp` | ALAC/AAC decoding with FFmpeg, conversion to 16-bit PCM, SDL audio queue |
+| `src/audio_player.cpp` | ALAC/AAC decoding, conversion to 16-bit PCM, SDL audio output selection and queue |
+| `src/screenshot.cpp` | Converts the newest decoded video frame to a PNG in the Pictures folder |
 | `src/recorder.cpp` | MP4 recording: H.264 remuxed as is, audio re-encoded to AAC-LC |
 | `src/sessions.cpp` | Session history in `%APPDATA%\OpenMirrorPhone\sessions.tsv`; renames recordings |
 | `src/settings.cpp` | Receiver name saved in `%APPDATA%\OpenMirrorPhone\settings.ini` |
 | `src/settings_dialog.cpp` | Native Settings dialog (name, session list, updates) and About box |
 | `src/updater.cpp` | Reads GitHub Releases, downloads the zip, swaps the app's files, restarts |
 | `src/update_dialog.cpp` | "Update available" (with download progress) and "What's New" dialogs |
-| `src/welcome_dialog.cpp` | First-launch Welcome window with the PayPal donate button (also Help → Support) |
+| `src/welcome_dialog.cpp` | First-launch Welcome window with the PayPal donate button |
+| `src/paypal_banner.cpp` | Loads and draws the PayPal button used by Welcome and Settings |
+| `src/theme.cpp` | Light and dark theme: colours, dark title bars, dark controls |
 | `src/network.cpp` | MAC address (receiver ID), PC name, data and video folders, UTF-8/UTF-16 helpers |
-| `src/app.rc`, `src/resource.h` | Icon, manifest, menu bar, Settings dialog layout, version info |
+| `src/app.rc`, `src/resource.h` | Icon, manifest, dialog layouts, version info |
 | `src/app.manifest` | Enables Common Controls 6, so the dialog has the native Windows 10/11 look |
 | `third_party/airplay/` | UxPlay's AirPlay core (GPLv3); commit in `VERSION` |
 | `third_party/bonjour/dns_sd.h` | Bonjour API header (Apple, BSD licence) |
@@ -189,14 +194,22 @@ iPhone sees the same receiver every time.
 **Editable name.** The name advertised over Bonjour is picked in this order: the `-n`
 option, the name saved in `settings.ini`, the PC's name. When the user changes it in
 Settings, `Receiver::rename` stops Bonjour and the AirPlay server and restarts them with the
-same ID and key: the iPhone sees the old name disappear and the new one appear. The name is limited to 50 UTF-8 bytes, because the RAOP service is advertised
+same ID and key. Reopen Screen Mirroring on the iPhone to refresh its device list. The name is limited to 50 UTF-8 bytes, because the RAOP service is advertised
 as `<12 hex digits>@<name>` and a DNS-SD label can't exceed 63 bytes.
 
-**Classic native UI.** The menu bar and the Settings dialog are plain Win32 resources
-(`app.rc`), not drawn by SDL: they look and behave like any Windows program (Alt shortcuts,
-Tab, F2 to rename in the list). The menu's `WM_COMMAND` messages reach the SDL loop as
-`SDL_SYSWMEVENT`. Settings is a modal dialog: while it is open the mirrored image pauses,
-and decoding and audio carry on in the background.
+**Classic native UI.** Settings and the other dialogs are plain Win32 resources (`app.rc`),
+not drawn by SDL: they look and behave like any Windows program (Alt shortcuts, Tab, F2 to
+rename in the list). Settings is a modal dialog: while it is open the mirrored image pauses,
+and decoding and audio carry on in the background. Its Updates page fetches the release list
+on its own thread and handles "Check for updates" and "Install update" itself, because the
+main loop does not run while the dialog is open.
+
+**Dark theme.** `theme.cpp` keeps the colours of both themes and applies them: the title bar
+through `DwmSetWindowAttribute` (immersive dark mode), push buttons, lists and edit boxes
+through Windows' own dark control themes (`DarkMode_Explorer`, `DarkMode_CFD`,
+`DarkMode_ItemsView`), and everything else through the `WM_CTLCOLOR*` messages. Check boxes
+use the classic look in dark mode, because the themed ones ignore the text colour; group
+boxes are painted by a small subclass with a thin frame.
 
 **Session history.** A session starts when a device begins mirroring (`VideoStarted`) and ends
 when it stops, disconnects or the receiver is renamed. Recordings started during a session
