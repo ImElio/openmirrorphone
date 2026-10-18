@@ -138,6 +138,24 @@ dnssd_destroy(dnssd_t *dnssd)
     }
 }
 
+void
+dnssd_set_pi(dnssd_t *dnssd, const char *pi)
+{
+    snprintf(dnssd->pi, sizeof(dnssd->pi), "%s", pi ? pi : "");
+}
+
+const char *
+dnssd_get_pi(dnssd_t *dnssd)
+{
+    return dnssd->pi[0] ? dnssd->pi : AIRPLAY_PI;
+}
+
+void
+dnssd_set_seed(dnssd_t *dnssd, unsigned int seed)
+{
+    dnssd->seed = seed;
+}
+
 const char *
 dnssd_get_name(dnssd_t *dnssd, int *length)
 {

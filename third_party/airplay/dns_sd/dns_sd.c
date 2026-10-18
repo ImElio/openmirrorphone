@@ -370,7 +370,13 @@ dnssd_register_airplay(dnssd_t *dnssd_public, unsigned short port)
     }
     dnssd->TXTRecordSetValue(&dnssd->airplay_record, "model", strlen(GLOBAL_MODEL), GLOBAL_MODEL);
     dnssd->TXTRecordSetValue(&dnssd->airplay_record, "pk", strlen(dnssd_public->pk), dnssd_public->pk);
-    dnssd->TXTRecordSetValue(&dnssd->airplay_record, "pi", strlen(AIRPLAY_PI), AIRPLAY_PI);
+    const char *pi = dnssd_get_pi(dnssd_public);
+    dnssd->TXTRecordSetValue(&dnssd->airplay_record, "pi", strlen(pi), pi);
+    if (dnssd_public->seed) {
+        char seed[16];
+        snprintf(seed, sizeof(seed), "%u", dnssd_public->seed);
+        dnssd->TXTRecordSetValue(&dnssd->airplay_record, "seed", strlen(seed), seed);
+    }
     dnssd->TXTRecordSetValue(&dnssd->airplay_record, "srcvers", strlen(AIRPLAY_SRCVERS), AIRPLAY_SRCVERS);
     dnssd->TXTRecordSetValue(&dnssd->airplay_record, "vv", strlen(AIRPLAY_VV), AIRPLAY_VV);
 
