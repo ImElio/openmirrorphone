@@ -22,7 +22,10 @@ window, with sound, and you can record it to MP4. Nothing needs to be installed 
 - Low latency: video is shown as soon as it arrives, with no buffering
 - Freely resizable window that keeps the screen's aspect ratio
 - Full screen with a double-click or F11
+- Keep the window above other apps with **Settings > Always on top**
 - MP4 recording with the **R** key, with no loss of video quality
+- PNG screenshots with the **S** key, saved to `Pictures\OpenMirrorPhone`
+- Choose the Windows audio output device used for mirrored sound
 - Audio from music apps (ALAC) and from mirroring (AAC-ELD)
 - A new device can take over from the one that is connected
 - Custom receiver name: the one shown in Screen Mirroring
@@ -35,7 +38,7 @@ window, with sound, and you can record it to MP4. Nothing needs to be installed 
 
 OpenMirrorPhone is free and always will be. If it's useful to you and you'd like to support
 its development, you can donate with PayPal: **[paypal.me/CallMeElio](https://paypal.me/CallMeElio)**.
-The same link is in the app under **Help → Support OpenMirrorPhone…**. Thank you!
+The same PayPal button is in the app, at the bottom of the Settings sidebar. Thank you!
 
 ## Download
 
@@ -50,9 +53,6 @@ PC": click **More info → Run anyway**.
 
 To uninstall it, use **Settings → Apps → Installed apps** in Windows. Your settings, session
 history and recordings are kept.
-
-Prefer a portable copy? Download `OpenMirrorPhone-x.y.z-win64.zip` instead and unzip it into a
-folder of your own; the app updates itself inside that folder.
 
 ## Requirements
 
@@ -70,10 +70,13 @@ folder of your own; the app updates itself inside that folder.
 
 | Key | Action |
 |---|---|
-| Double-click, F11 | Full screen on/off |
-| Esc | Leave full screen |
-| R | Start or stop recording |
-| Ctrl+, | Open Settings |
+| Double-click, F11 (default) | Full screen on/off |
+| Esc (default) | Leave full screen |
+| R (default) | Start or stop recording |
+| S (default) | Save a PNG screenshot of the mirrored screen |
+| Ctrl+, (default) | Open Settings |
+
+Keyboard shortcuts can be changed in **Settings → Keybinds** and restored to their defaults there.
 
 Recordings are saved to `Videos\OpenMirrorPhone\<date time>.mp4`. While recording, a "REC"
 badge with the elapsed time is shown in the top-left corner. Recording stops on its own when
@@ -81,23 +84,28 @@ the phone stops mirroring.
 
 ### Settings
 
-Open **Settings → Settings…** in the menu bar (or press Ctrl+,).
+Click the gear button in the top-right corner of the window (or press Ctrl+,). Pick a page in
+the sidebar on the left:
 
-- **Receiver name**: the name your iPhone shows in Screen Mirroring. It starts as the PC's
-  name. Type a new one and press **Apply**: it is saved and shows up on the phone within a
-  few seconds. A device that is mirroring at that moment is disconnected. Maximum length:
-  50 bytes (about 50 characters without accents).
+- **General**
+  - **Receiver name**: the name your iPhone shows in Screen Mirroring. It starts as the PC's
+    name. Type a new one and press **Apply**: it is saved and shows up on the phone within a
+    few seconds. A device that is mirroring at that moment is disconnected. Maximum length:
+    50 bytes (about 50 characters without accents).
+  - **Window and playback**: keep the window above other windows, select the audio output,
+    save a PNG screenshot, use full screen, start or stop a recording, and open the recordings folder.
+  - **Appearance**: **Dark theme** for Settings, the other dialogs and the window's title bar.
+    It changes at once.
 - **Session history**: one line per mirroring session.
   - **Rename** (or F2): gives the session a name, for example "Monday lesson". Its
     recordings are renamed to match, e.g. `Monday lesson.mp4`.
   - **Play recording** (or double-click): opens the recording in your video player.
   - **Delete** (or Del): removes the session from the history. If it has a recording, you
     can choose to keep the file or move it to the Recycle Bin.
-  - **Open recordings folder**: opens `Videos\OpenMirrorPhone` in Explorer.
-
-- **Updates**: whether to check GitHub for a new version when the app starts (on by default).
-
-The **Settings** menu also has Full screen, Start/stop recording and Open recordings folder.
+- **Updates**: whether to check GitHub for a new version when the app starts (on by
+  default), **Check for updates** with the result shown next to it, and below, what's new in
+  the version you have.
+- **About**: version and project information.
 
 ### Updates
 
@@ -105,8 +113,8 @@ When a new version is published, OpenMirrorPhone shows **Update available** at s
 what changed. **Install and restart** downloads it, replaces the app's files and starts the
 new version; **Later** asks again next time; **Skip this version** stops asking until an even
 newer one comes out. The first time the new version opens, **What's New** lists the changes.
-You can also use **Help → Check for updates…** at any time, and **Help → What's New** shows the
-notes of every version.
+You can also check at any time in **Settings → Updates**: if a newer version exists, the
+button becomes **Install update**.
 
 Updates are installed in the folder the app runs from. The setup puts it in your user folder,
 where that always works; if you use the portable zip, keep it in a folder you can write to
