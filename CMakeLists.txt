@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(OpenMirrorPhone VERSION 0.1.0 LANGUAGES C CXX RC)
+project(OpenMirrorPhone VERSION 0.1.1 LANGUAGES C CXX RC)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)

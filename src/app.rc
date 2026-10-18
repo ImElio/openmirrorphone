@@ -82,7 +82,7 @@ BEGIN
   LTEXT         "The app and the project.", IDC_ABOUT_INFO, 124, 24, 296, 9
   GROUPBOX      "", IDC_ABOUT_GROUP, 124, 40, 298, 92
   LTEXT         "OpenMirrorPhone", IDC_ABOUT_PRODUCT, 134, 56, 278, 16
-  LTEXT         "Version 0.1.0", IDC_ABOUT_VERSION, 134, 74, 278, 9
+  LTEXT         "Version 0.1.1", IDC_ABOUT_VERSION, 134, 74, 278, 9
   LTEXT         "Mirror your iPhone, iPad or Mac screen to this PC. No app is needed on the phone.\n\nFree and open source, licensed under the GPLv3.",
                 IDC_ABOUT_DESCRIPTION, 134, 90, 278, 36
 
@@ -131,8 +131,8 @@ BEGIN
     BEGIN
       VALUE "ProductName",      "OpenMirrorPhone"
       VALUE "FileDescription",  "OpenMirrorPhone - screen mirroring receiver"
-      VALUE "FileVersion",      "0.1.0"
-      VALUE "ProductVersion",   "0.1.0"
+      VALUE "FileVersion",      "0.1.1"
+      VALUE "ProductVersion",   "0.1.1"
       VALUE "OriginalFilename", "OpenMirrorPhone.exe"
       VALUE "LegalCopyright",   "GPLv3"
     END
