@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <mutex>
+#include <string>
 #include <vector>
 
 struct AVCodecContext;
@@ -24,6 +25,9 @@ public:
     ~AudioPlayer();
 
     bool open_device(); // UI thread, after SDL_Init(SDL_INIT_AUDIO)
+    std::vector<std::string> output_devices() const;
+    std::string output_device() const;
+    bool set_output_device(const std::string &name);
 
     // Called from the AirPlay audio thread. `ct` is the AirPlay compression type:
     // 2 = ALAC, 4 = AAC-LC, 8 = AAC-ELD.
@@ -38,7 +42,7 @@ private:
     bool open_decoder_locked(unsigned char ct);
     void close_decoder_locked();
 
-    std::mutex mutex_;
+    mutable std::mutex mutex_;
     AVCodecContext *ctx_ = nullptr;
     AVPacket *pkt_ = nullptr;
     AVFrame *frame_ = nullptr;
@@ -47,6 +51,7 @@ private:
     std::vector<int16_t> pcm_;
 
     uint32_t device_ = 0;
+    std::string device_name_; // empty means the Windows default output
     std::atomic<float> volume_db_{0.0f};
     std::atomic<float> gain_{1.0f};
 };

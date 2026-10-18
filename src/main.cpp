@@ -2,6 +2,8 @@
 // Shows an iPhone/iPad/Mac screen in a window on the PC.
 
 #include "audio_player.h"
+#include "icons.h"
+#include "keybinds.h"
 #include "network.h"
 #include "receiver.h"
 #include "recorder.h"
@@ -9,6 +11,8 @@
 #include "sessions.h"
 #include "settings.h"
 #include "settings_dialog.h"
+#include "screenshot.h"
+#include "theme.h"
 #include "update_dialog.h"
 #include "updater.h"
 #include "video_decoder.h"
@@ -29,6 +33,7 @@ extern "C" {
 #include <windows.h>
 
 #include <algorithm>
+#include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -84,13 +89,17 @@ struct Ui {
     SDL_Window *window = nullptr;
     SDL_Renderer *renderer = nullptr;
     HWND hwnd = nullptr;
-    HMENU menu = nullptr;
     SDL_Texture *video = nullptr;
     int tex_w = 0, tex_h = 0;
     Uint32 tex_format = 0;
     TTF_Font *name_font = nullptr;  // Segoe UI Light, large
     TTF_Font *body_font = nullptr;  // Segoe UI
     bool showing_video = false;
+    bool has_frame = false;
+    AVFrame *latest_frame = nullptr; // owned by main; screenshot capture runs on the UI thread
+    std::string screenshot_notice;
+    Uint32 screenshot_notice_until = 0;
+    SDL_Texture *gear_icon = nullptr; // settings button, created on first draw
 };
 
 // Waiting screen palette: black, like a TV input waiting for a signal.
@@ -170,6 +179,18 @@ void draw_video(Ui &ui) {
     }
 }
 
+void draw_screenshot_notice(Ui &ui) {
+    if (ui.screenshot_notice.empty() || SDL_TICKS_PASSED(SDL_GetTicks(), ui.screenshot_notice_until)) return;
+    int w, h, tw = 0, th = 0;
+    SDL_GetRendererOutputSize(ui.renderer, &w, &h);
+    if (!ui.body_font || TTF_SizeUTF8(ui.body_font, ui.screenshot_notice.c_str(), &tw, &th) != 0) return;
+    SDL_Rect panel{(w - tw - 36) / 2, h - th - 40, tw + 36, th + 20};
+    SDL_SetRenderDrawBlendMode(ui.renderer, SDL_BLENDMODE_BLEND);
+    SDL_SetRenderDrawColor(ui.renderer, 32, 32, 32, 225);
+    SDL_RenderFillRect(ui.renderer, &panel);
+    draw_text(ui, ui.body_font, ui.screenshot_notice, w / 2, panel.y + 10, SDL_Color{255, 255, 255, 255});
+}
+
 // "REC" badge in the top-left corner: a red dot and the recorded time, or a
 // grey dot while the recorder waits for the sender's next keyframe.
 void draw_rec(Ui &ui, const Recorder &rec) {
@@ -207,12 +228,9 @@ std::string recording_path() {
     return recordings_dir() + "\\" + stamp + ".mp4";
 }
 
-// Full screen hides the menu bar; windowed mode brings it back.
 void toggle_fullscreen(Ui &ui) {
     bool fs = SDL_GetWindowFlags(ui.window) & SDL_WINDOW_FULLSCREEN_DESKTOP;
-    if (!fs && ui.hwnd) SetMenu(ui.hwnd, nullptr);
     SDL_SetWindowFullscreen(ui.window, fs ? 0 : SDL_WINDOW_FULLSCREEN_DESKTOP);
-    if (fs && ui.hwnd) SetMenu(ui.hwnd, ui.menu);
 }
 
 TTF_Font *open_system_font(const char *file, int size) {
@@ -222,6 +240,48 @@ TTF_Font *open_system_font(const char *file, int size) {
 
 void set_title(Ui &ui, const std::string &name) {
     SDL_SetWindowTitle(ui.window, ("OpenMirrorPhone - " + name).c_str());
+}
+
+bool set_always_on_top(Ui &ui, bool enabled) {
+    if (!ui.hwnd || !SetWindowPos(ui.hwnd, enabled ? HWND_TOPMOST : HWND_NOTOPMOST, 0, 0, 0, 0,
+                                  SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE)) {
+        return false;
+    }
+    return true;
+}
+
+void draw_settings_button(Ui &ui) {
+    int w, h, window_w, window_h;
+    SDL_GetRendererOutputSize(ui.renderer, &w, &h);
+    SDL_GetWindowSize(ui.window, &window_w, &window_h);
+    const float sx = static_cast<float>(w) / window_w;
+    const float sy = static_cast<float>(h) / window_h;
+    const int size = static_cast<int>(42 * std::min(sx, sy));
+    const int margin = static_cast<int>(8 * sx);
+    const int left = w - size - margin;
+    const int top = static_cast<int>(8 * sy);
+    const int cx = left + size / 2;
+    const int cy = top + size / 2;
+
+    // The pixel-art gear, doubled with nearest-neighbour scaling so it stays crisp.
+    if (!ui.gear_icon) {
+        ui.gear_icon = SDL_CreateTexture(ui.renderer, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STATIC, kIconSize,
+                                         kIconSize);
+        SDL_UpdateTexture(ui.gear_icon, nullptr, icon_rgba(Icon::Gear), kIconSize * 4);
+        SDL_SetTextureBlendMode(ui.gear_icon, SDL_BLENDMODE_BLEND);
+        SDL_SetTextureScaleMode(ui.gear_icon, SDL_ScaleModeNearest);
+    }
+    const int icon = static_cast<int>(kIconSize * 1.5f * std::min(sx, sy));
+    SDL_Rect dst{cx - icon / 2, cy - icon / 2, icon, icon};
+    SDL_RenderCopy(ui.renderer, ui.gear_icon, nullptr, &dst);
+}
+
+bool settings_button_hit(Ui &ui, int x, int y) {
+    int w, h;
+    SDL_GetWindowSize(ui.window, &w, &h);
+    // Keep the same centre as the rendered icon, with a generous invisible
+    // hit area around it so the small pixel-art gear is easy to click.
+    return x >= w - 58 && x < w && y >= 0 && y < 58;
 }
 
 void print_usage() {
@@ -279,20 +339,22 @@ int main(int argc, char **argv) {
     ui.body_font = open_system_font("segoeui.ttf", 18);
     SDL_StopTextInput(); // SDL2 starts with text input on; nothing here needs it
 
-    // Native Windows menu bar; its WM_COMMAND messages arrive as SDL_SYSWMEVENT.
     SDL_SysWMinfo wm;
     SDL_VERSION(&wm.version);
     if (SDL_GetWindowWMInfo(ui.window, &wm)) {
         ui.hwnd = wm.info.win.window;
-        ui.menu = LoadMenuW(GetModuleHandleW(nullptr), MAKEINTRESOURCEW(IDR_MAIN_MENU));
-        SetMenu(ui.hwnd, ui.menu);
-        SDL_EventState(SDL_SYSWMEVENT, SDL_ENABLE);
+        apply_theme(ui.hwnd); // dark title bar when the dark theme is on
     }
+    bool always_on_top = load_setting("always_on_top") == "1";
+    if (always_on_top && !set_always_on_top(ui, true)) always_on_top = false;
     if (start_fullscreen) toggle_fullscreen(ui);
 
     VideoDecoder video;
     AudioPlayer audio;
     audio.open_device();
+    const std::string saved_audio_device = load_setting("audio_output");
+    if (!saved_audio_device.empty() && !audio.set_output_device(saved_audio_device))
+        save_setting("audio_output", ""); // the saved device may have been removed
     Recorder recorder;
     SessionLog sessions;
 
@@ -307,7 +369,11 @@ int main(int argc, char **argv) {
     const std::string kWaiting = u8"Waiting for a device\u2026";
     const std::string kNoBonjour = "Cannot start: the Apple Bonjour service is required";
     std::string status = kWaiting;
-    if (!receiver.start(name, find_mac_address(), app_data_dir() + "\\airplay.pem")) status = kNoBonjour;
+    const std::string receiver_mac = find_mac_address();
+    const std::string receiver_key = app_data_dir() + "\\airplay.pem";
+    if (!receiver.start(name, receiver_mac, receiver_key)) status = kNoBonjour;
+
+    KeybindSet keybinds = load_keybinds();
 
     bool dirty = true;
     std::string pending_recording; // started before the session it belongs to
@@ -328,25 +394,75 @@ int main(int argc, char **argv) {
         }
         dirty = true;
     };
+    bool running = true;
     auto open_settings = [&] {
         SettingsHost host;
+        host.keybinds = keybinds;
+        host.set_keybinds = [&](const KeybindSet &updated) {
+            keybinds = updated;
+            save_keybinds(keybinds);
+            return true;
+        };
         host.current_name = [&] { return name; };
         host.apply_name = [&](const std::string &new_name) {
+            const std::string previous_name = name;
             end_session();
             ui.showing_video = false;
+            ui.has_frame = false;
+            if (!receiver.rename(new_name)) {
+                // Do not leave the title/settings claiming a name Bonjour failed
+                // to advertise. Clean up a partial start and restore the old name.
+                receiver.stop();
+                name = previous_name;
+                set_title(ui, name);
+                bool restored = receiver.start(name, receiver_mac, receiver_key);
+                status = restored ? kWaiting : kNoBonjour;
+                return false;
+            }
             name = new_name;
             save_receiver_name(name);
             set_title(ui, name);
-            bool ok = receiver.rename(name);
-            status = ok ? kWaiting : kNoBonjour;
-            return ok;
+            status = kWaiting;
+            return true;
         };
         host.recording = [&] { return recorder.state() != Recorder::State::Off; };
+        host.always_on_top = [&] { return always_on_top; };
+        host.set_always_on_top = [&](bool enabled) {
+            if (!set_always_on_top(ui, enabled)) return false;
+            always_on_top = enabled;
+            save_setting("always_on_top", enabled ? "1" : "0");
+            return true;
+        };
+        host.toggle_fullscreen = [&] {
+            toggle_fullscreen(ui);
+            dirty = true;
+        };
+        host.toggle_recording = [&] { toggle_recording(); };
+        host.open_recordings_folder = [&] { shell_open(recordings_dir()); };
+        host.audio_output_devices = [&] { return audio.output_devices(); };
+        host.audio_output_device = [&] { return audio.output_device(); };
+        host.set_audio_output_device = [&](const std::string &device) {
+            if (!audio.set_output_device(device)) return false;
+            save_setting("audio_output", device);
+            return true;
+        };
+        host.take_screenshot = [&] {
+            if (!ui.has_frame || !ui.latest_frame) return std::string("Start mirroring before taking a screenshot.");
+            std::string result;
+            if (save_screenshot_png(ui.latest_frame, &result)) {
+                ui.screenshot_notice = "Screenshot saved";
+                ui.screenshot_notice_until = SDL_GetTicks() + 3500;
+                dirty = true;
+                return std::string("Screenshot saved to:\n") + result;
+            }
+            return result;
+        };
+        host.theme_changed = [&] { apply_theme(ui.hwnd); };
+        host.exit_app = [&] { running = false; };
         host.sessions = &sessions;
         show_settings_dialog(ui.hwnd, host);
         dirty = true;
     };
-    bool running = true;
 
     // --- Updates -------------------------------------------------------------
     // What's New: if this version differs from the one that ran last, show what
@@ -436,20 +552,6 @@ int main(int argc, char **argv) {
         }
     };
 
-    auto on_menu = [&](int id) {
-        switch (id) {
-        case IDM_SETTINGS: open_settings(); break;
-        case IDM_FULLSCREEN: toggle_fullscreen(ui); break;
-        case IDM_RECORD: toggle_recording(); break;
-        case IDM_FOLDER: shell_open(recordings_dir()); break;
-        case IDM_CHECK_UPDATES: fetch_releases_async(FetchPurpose::CheckNow); break;
-        case IDM_WHATS_NEW: fetch_releases_async(FetchPurpose::WhatsNew); break;
-        case IDM_DONATE: show_welcome_dialog(ui.hwnd); break;
-        case IDM_ABOUT: show_about_dialog(ui.hwnd); break;
-        case IDM_EXIT: running = false; break;
-        }
-    };
-
     AVFrame *frame = av_frame_alloc();
     int shown_rec_second = -1;
     while (running) {
@@ -459,16 +561,32 @@ int main(int argc, char **argv) {
             do {
                 if (e.type == SDL_QUIT) {
                     running = false;
-                } else if (e.type == SDL_SYSWMEVENT && e.syswm.msg->msg.win.msg == WM_COMMAND &&
-                           HIWORD(e.syswm.msg->msg.win.wParam) == 0) {
-                    on_menu(LOWORD(e.syswm.msg->msg.win.wParam));
                 } else if (e.type == SDL_KEYDOWN && !e.key.repeat) {
-                    SDL_Keycode k = e.key.keysym.sym;
-                    if (k == SDLK_F11) toggle_fullscreen(ui);
-                    else if (k == SDLK_r && !(e.key.keysym.mod & (KMOD_CTRL | KMOD_ALT))) toggle_recording();
-                    else if (k == SDLK_COMMA && (e.key.keysym.mod & KMOD_CTRL)) open_settings();
-                    else if (k == SDLK_ESCAPE && (SDL_GetWindowFlags(ui.window) & SDL_WINDOW_FULLSCREEN_DESKTOP))
+                    if (keybind_matches(keybinds[static_cast<size_t>(KeybindAction::Fullscreen)],
+                                        e.key.keysym.scancode, e.key.keysym.mod)) toggle_fullscreen(ui);
+                    else if (keybind_matches(keybinds[static_cast<size_t>(KeybindAction::Recording)],
+                                             e.key.keysym.scancode, e.key.keysym.mod)) toggle_recording();
+                    else if (keybind_matches(keybinds[static_cast<size_t>(KeybindAction::Screenshot)],
+                                             e.key.keysym.scancode, e.key.keysym.mod)) {
+                        std::string result;
+                        if (ui.has_frame && ui.latest_frame && save_screenshot_png(ui.latest_frame, &result)) {
+                            ui.screenshot_notice = "Screenshot saved";
+                            ui.screenshot_notice_until = SDL_GetTicks() + 3500;
+                        } else {
+                            ui.screenshot_notice = ui.has_frame ? result : "Start mirroring before taking a screenshot";
+                            ui.screenshot_notice_until = SDL_GetTicks() + 3500;
+                        }
+                        dirty = true;
+                    } else if (keybind_matches(keybinds[static_cast<size_t>(KeybindAction::Settings)],
+                                               e.key.keysym.scancode, e.key.keysym.mod)) open_settings();
+                    else if (keybind_matches(keybinds[static_cast<size_t>(KeybindAction::ExitFullscreen)],
+                                             e.key.keysym.scancode, e.key.keysym.mod) &&
+                             (SDL_GetWindowFlags(ui.window) & SDL_WINDOW_FULLSCREEN_DESKTOP))
                         toggle_fullscreen(ui);
+                } else if (e.type == SDL_MOUSEBUTTONDOWN && e.button.button == SDL_BUTTON_LEFT &&
+                           settings_button_hit(ui, e.button.x, e.button.y)) {
+                    open_settings();
+                    dirty = true;
                 } else if (e.type == SDL_MOUSEBUTTONDOWN && e.button.button == SDL_BUTTON_LEFT &&
                            e.button.clicks == 2) {
                     toggle_fullscreen(ui);
@@ -485,17 +603,20 @@ int main(int argc, char **argv) {
                             sessions.add_recording(pending_recording);
                         pending_recording.clear();
                         ui.showing_video = true;
+                        ui.has_frame = false;
                         break;
                     }
                     case Receiver::Event::VideoStopped:
                     case Receiver::Event::ClientDisconnected:
                         end_session();
                         ui.showing_video = false;
+                        ui.has_frame = false;
                         status = kWaiting;
                         break;
                     case Receiver::Event::ConnectionLost:
                         end_session();
                         ui.showing_video = false;
+                        ui.has_frame = false;
                         status = u8"Connection lost, waiting\u2026";
                         receiver.restart_after_reset();
                         break;
@@ -512,6 +633,12 @@ int main(int argc, char **argv) {
 
         if (video.take_frame(frame) && upload_frame(ui, frame)) {
             ui.showing_video = true;
+            ui.has_frame = true;
+            ui.latest_frame = frame;
+            dirty = true;
+        }
+        if (!ui.screenshot_notice.empty() && SDL_TICKS_PASSED(SDL_GetTicks(), ui.screenshot_notice_until)) {
+            ui.screenshot_notice.clear();
             dirty = true;
         }
         // Keep the REC clock ticking even when the mirrored screen is still.
@@ -524,6 +651,8 @@ int main(int argc, char **argv) {
             if (ui.showing_video) draw_video(ui);
             else draw_idle(ui, name, status);
             draw_rec(ui, recorder);
+            draw_settings_button(ui);
+            draw_screenshot_notice(ui);
             SDL_RenderPresent(ui.renderer);
             dirty = false;
         }
@@ -534,13 +663,13 @@ int main(int argc, char **argv) {
     receiver.stop();
     av_frame_free(&frame);
     if (ui.video) SDL_DestroyTexture(ui.video);
+    if (ui.gear_icon) SDL_DestroyTexture(ui.gear_icon);
     for (TTF_Font *f : {ui.name_font, ui.body_font}) {
         if (f) TTF_CloseFont(f);
     }
     TTF_Quit();
     SDL_DestroyRenderer(ui.renderer);
     SDL_DestroyWindow(ui.window);
-    if (ui.menu) DestroyMenu(ui.menu);
     SDL_Quit();
     return 0;
 }
