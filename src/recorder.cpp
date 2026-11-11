@@ -13,6 +13,7 @@ extern "C" {
 
 #include <algorithm>
 #include <cstdio>
+#include <cstring>
 
 namespace {
 constexpr int kSampleRate = 44100;
@@ -275,6 +276,33 @@ void Recorder::write_video_locked(const uint8_t *data, int size, uint64_t ntp_ns
         log_error("cannot write video", err);
         write_failed_ = true;
     }
+}
+
+void Recorder::audio_pcm(const uint8_t *data, int size, uint64_t monotonic_ns) {
+    constexpr int bytes_per_frame = 2 * static_cast<int>(sizeof(int16_t));
+    if (!data || size <= 0 || size % bytes_per_frame != 0 || monotonic_ns == 0) return;
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (!fmt_) return;
+
+    const int samples = size / bytes_per_frame;
+    for (auto &plane : pcm_) plane.resize(static_cast<size_t>(samples));
+    for (int i = 0; i < samples; ++i) {
+        const size_t offset = static_cast<size_t>(i) * bytes_per_frame;
+        const uint16_t left_bits = static_cast<uint16_t>(data[offset]) |
+                                   (static_cast<uint16_t>(data[offset + 1]) << 8);
+        const uint16_t right_bits = static_cast<uint16_t>(data[offset + 2]) |
+                                    (static_cast<uint16_t>(data[offset + 3]) << 8);
+        int16_t left = 0, right = 0;
+        std::memcpy(&left, &left_bits, sizeof left);
+        std::memcpy(&right, &right_bits, sizeof right);
+        pcm_[0][static_cast<size_t>(i)] = static_cast<float>(left) / 32768.0f;
+        pcm_[1][static_cast<size_t>(i)] = static_cast<float>(right) / 32768.0f;
+    }
+
+    const float *planes[kChannels] = {pcm_[0].data(), pcm_[1].data()};
+    const int64_t start =
+        av_rescale_q(static_cast<int64_t>(monotonic_ns - base_ns_), kNanoseconds, {1, kSampleRate});
+    push_audio_locked(planes, samples, start);
 }
 
 bool Recorder::open_audio_decoder_locked(unsigned char ct) {

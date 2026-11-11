@@ -37,6 +37,8 @@ public:
     // AirPlay threads. `ntp_ns` is ntp_time_remote of the decode structs.
     void video(const uint8_t *data, int size, uint64_t ntp_ns, bool h265);
     void audio(unsigned char ct, const uint8_t *data, int size, uint64_t ntp_ns);
+    // Android playback capture: 44.1 kHz stereo signed 16-bit PCM.
+    void audio_pcm(const uint8_t *data, int size, uint64_t monotonic_ns);
     void reset(); // the stream restarted: the cached frames no longer decode
 
 private:

@@ -131,6 +131,11 @@ void on_video_report_size(void *, float *ws, float *hs, float *w, float *h) {
 
 void on_report_client_request(void *cls, char *deviceid, char *model, char *name, bool *admit) {
     std::fprintf(stderr, "[airplay] connection from \"%s\" (%s, %s)\n", name, model, deviceid);
+    if (self(cls).android_streaming()) {
+        *admit = false;
+        std::fprintf(stderr, "[airplay] rejected while an Android stream is active\n");
+        return;
+    }
     self(cls).set_client(name ? name : "", model ? model : "");
     *admit = true;
 }

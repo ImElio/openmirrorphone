@@ -55,19 +55,22 @@ void VideoDecoder::reset() {
     fresh_ = false;
 }
 
-void VideoDecoder::decode(const uint8_t *data, int size) {
+bool VideoDecoder::decode(const uint8_t *data, int size) {
     std::lock_guard<std::mutex> lock(codec_mutex_);
-    if (!ctx_ && !open_locked(h265_)) return;
+    if (!ctx_ && !open_locked(h265_)) return false;
     pkt_->data = const_cast<uint8_t *>(data);
     pkt_->size = size;
-    if (avcodec_send_packet(ctx_, pkt_) < 0) return;
+    if (avcodec_send_packet(ctx_, pkt_) < 0) return false;
+    bool produced = false;
     while (avcodec_receive_frame(ctx_, decoded_) == 0) {
         std::lock_guard<std::mutex> flock(frame_mutex_);
         if (!latest_) latest_ = av_frame_alloc();
         av_frame_unref(latest_);
         av_frame_move_ref(latest_, decoded_);
         fresh_ = true;
+        produced = true;
     }
+    return produced;
 }
 
 bool VideoDecoder::take_frame(AVFrame *out) {

@@ -22,6 +22,8 @@ struct SettingsHost {
     std::function<std::vector<std::string>()> audio_output_devices;
     std::function<std::string()> audio_output_device;
     std::function<bool(const std::string &)> set_audio_output_device;
+    std::function<bool()> android_support_enabled;
+    std::function<bool(bool)> set_android_support_enabled;
     std::function<std::string()> take_screenshot;
     KeybindSet keybinds = default_keybinds();
     std::function<bool(const KeybindSet &)> set_keybinds;

@@ -32,6 +32,8 @@ public:
     // Called from the AirPlay audio thread. `ct` is the AirPlay compression type:
     // 2 = ALAC, 4 = AAC-LC, 8 = AAC-ELD.
     void play(unsigned char ct, const uint8_t *data, int size);
+    // Android playback capture arrives as 44.1 kHz stereo signed 16-bit PCM.
+    void play_pcm(const uint8_t *data, int size);
     void flush();
 
     // AirPlay volume in dB: 0 is full, -30 is quietest, -144 means mute.

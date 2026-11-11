@@ -6,6 +6,9 @@
 // AirPlay uses it as the receiver's device ID, so it must stay stable across runs.
 std::string find_mac_address();
 
+// IPv4 address on the first active LAN adapter with a gateway.
+std::string find_ipv4_address();
+
 // Windows computer name, used as the default AirPlay receiver name.
 std::string computer_name();
 
