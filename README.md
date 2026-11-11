@@ -6,12 +6,13 @@
 </p>
 
 <p align="center">
-  Mirror your iPhone, iPad or Mac screen to your Windows PC. Free and open source.
+  Mirror iPhone, iPad, Mac or Android to your Windows PC. Free and open source.
 </p>
 
 OpenMirrorPhone is an AirPlay-compatible receiver for Windows. Your PC shows up in the
 iPhone's Screen Mirroring list as if it were an Apple TV: the phone's screen appears in a
-window, with sound, and you can record it to MP4. Nothing needs to be installed on the phone.
+window, with sound, and you can record it to MP4. iPhone, iPad and Mac need no companion app.
+Android uses the separate OpenMirrorPhone companion app and is currently an early preview.
 
 > AirPlay, iPhone, iPad and Mac are trademarks of Apple Inc. OpenMirrorPhone is an
 > independent project, not affiliated with Apple.
@@ -19,7 +20,8 @@ window, with sound, and you can record it to MP4. Nothing needs to be installed 
 ## Features
 
 - Screen mirroring from iPhone, iPad and Mac, with audio
-- Low latency: video is shown as soon as it arrives, with no buffering
+- Experimental Android screen mirroring through the OpenMirrorPhone companion app, with supported app audio
+- Low latency AirPlay video: frames are shown as soon as they arrive, with no buffering
 - Freely resizable window that keeps the screen's aspect ratio
 - Full screen with a double-click or F11
 - Keep the window above other apps with **Settings > Always on top**
@@ -43,10 +45,15 @@ The same PayPal button is in the app, at the bottom of the Settings sidebar. Tha
 ## Download
 
 1. Download **`OpenMirrorPhone-x.y.z-setup.exe`** from the
-   [latest release](https://github.com/ImElio/openmirrorphone/releases/latest).
+   [GitHub Releases](https://github.com/ImElio/openmirrorphone/releases). Choose the newest
+   Windows release tagged `vX.Y.Z`; Android releases use `android-vX.Y.Z` and contain an APK.
 2. Run it. It installs for your user only, so no administrator rights are needed, and adds
    OpenMirrorPhone to the Start menu.
 3. Start OpenMirrorPhone from the last page of the setup or from the Start menu.
+
+The Android companion is a separate APK published in its own GitHub release, using tags such as
+`android-v0.1.0`; it is not included in the Windows installer. Android releases and Windows
+releases have separate version numbers.
 
 The app is not digitally signed, so the first time Windows may show "Windows protected your
 PC": click **More info → Run anyway**.
@@ -57,8 +64,8 @@ history and recordings are kept.
 ## Requirements
 
 - Windows 10 or 11, 64-bit
-- PC and iPhone on the **same network**, Wi-Fi or LAN
-- Apple's **Bonjour** service. It is already installed if you have iTunes or the Apple
+- PC and the Apple or Android device on the **same network**, Wi-Fi or LAN
+- Apple's **Bonjour** service (for iPhone, iPad and Mac mirroring). It is already installed if you have iTunes or the Apple
   Devices app; otherwise install
   [Bonjour Print Services](https://support.apple.com/kb/DL999).
 
@@ -81,6 +88,24 @@ Keyboard shortcuts can be changed in **Settings → Keybinds** and restored to t
 Recordings are saved to `Videos\OpenMirrorPhone\<date time>.mp4`. While recording, a "REC"
 badge with the elapsed time is shown in the top-left corner. Recording stops on its own when
 the phone stops mirroring.
+
+### Android preview
+
+Android uses the OpenMirrorPhone companion app. In Windows, open **Settings > Android** and
+turn on **Enable Android support**. In the Android app, tap **Scan QR** and scan the code shown
+there to save this PC's address; scanning does not start screen sharing. With **Remember PC
+address** enabled, it stays saved for next time. Tap **Start capture** when ready, then approve
+Android's screen-sharing and playback-audio prompts. You can still enter the address manually.
+Keep both devices on the same
+trusted local network. The emulator address is `10.0.2.2:24862`.
+
+This preview sends video and supported app playback audio; it does not capture the microphone.
+When **Stream app audio** is enabled, Android asks for audio permission before sharing. Some apps
+may block playback capture, so audio is not guaranteed for every app. Automatic PC discovery is
+not available. While Android support
+is enabled, the PC listens on TCP port 24862. There is no PIN or encryption, so another device on
+the same network can connect. Turn Android support off when you are not using it. The companion
+APK is distributed separately from the Windows installer.
 
 ### Settings
 
@@ -105,6 +130,8 @@ the sidebar on the left:
 - **Updates**: whether to check GitHub for a new version when the app starts (on by
   default), **Check for updates** with the result shown next to it, and below, what's new in
   the version you have.
+- **Android**: enable or disable the Android receiver, copy this PC's address, scan its QR code
+  from the companion app, and follow the setup steps. The receiver is off by default.
 - **About**: version and project information.
 
 ### Updates
@@ -429,7 +456,8 @@ The file-by-file layout and the design choices are in [CONTRIBUTING.md](CONTRIBU
 
 - One device at a time; a new device takes over from the previous one.
 - No video-by-URL (HLS), no album art or track titles.
-- No PIN or password: anyone on the same network can connect.
+- No PIN or password for AirPlay. When Android support is enabled, its local video and audio
+  connection also has no authentication or encryption; anyone on the same network can connect.
 - Updates are trusted because they come over HTTPS from the project's GitHub releases; the
   zip is not signed or checksummed. Whoever can publish releases can ship code to every user.
 - The package is about 140 MB, because MSYS2's FFmpeg build includes every codec. An FFmpeg
@@ -445,6 +473,13 @@ networks. Public and guest Wi-Fi networks often isolate devices from each other.
 **The window says "Cannot start: the Apple Bonjour service is required".**
 Bonjour is missing: install it (see Requirements) and restart the app.
 
+**An Android phone cannot connect.**
+Open **Settings > Android** on the PC and make sure **Enable Android support** is checked. In the
+companion app, tap **Scan QR** and scan the code shown in Windows; this fills the address and
+stores the PC for next time. Tap **Start capture** when ready to share. Both devices must be on the
+same network, and Windows Firewall must
+allow OpenMirrorPhone on private networks.
+
 **Choppy video.**
 Mirroring needs a lot of bandwidth: move closer to the router or connect the PC by cable.
 
@@ -459,7 +494,15 @@ also explains how to build the app. To report a security problem privately, see
 The AirPlay protocol is implemented by the open-source core of
 [UxPlay](https://github.com/FDH2/UxPlay), itself based on RPiPlay and shairplay.
 Decoding and recording use [FFmpeg](https://ffmpeg.org/); the window uses
-[SDL2](https://www.libsdl.org/).
+[SDL2](https://www.libsdl.org/). QR generation uses Project Nayuki's
+[QR Code generator](https://www.nayuki.io/page/qr-code-generator-library) under the MIT License.
+The Android companion uses [ZXing Android Embedded](https://github.com/journeyapps/zxing-android-embedded)
+under the Apache License 2.0 for QR scanning.
+
+The Android robot icon in Settings is reproduced or modified from work created and shared by
+Google and used according to terms described in the
+[Creative Commons 3.0 Attribution License](https://creativecommons.org/licenses/by/3.0/).
+Android is a trademark of Google LLC.
 
 ## License
 
