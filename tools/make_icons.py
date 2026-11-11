@@ -1,11 +1,3 @@
-"""Draws OpenMirrorPhone's 16x16 pixel-art icons (Windows 98 style) and writes
-src/icons_data.inc. Shapes are drawn with a few primitives in the classic 16-colour
-palette; a black outline is then added around every shape automatically.
-
-    python tools/make_icons.py [preview.png]
-
-With a path, also saves an enlarged preview sheet (needs nothing but the standard
-library: the PNG is written by hand)."""
 import math
 import struct
 import sys
@@ -17,6 +9,8 @@ PALETTE = {
     'd': (64, 64, 64), 'r': (255, 0, 0), 'R': (128, 0, 0), 'l': (0, 255, 0), 'L': (0, 128, 0),
     'b': (0, 0, 255), 'B': (0, 0, 128), 'c': (0, 255, 255), 't': (0, 128, 128),
     'y': (255, 255, 0), 'o': (128, 128, 0), 'f': (255, 255, 160), 'p': (255, 160, 160),
+    # Android green (#3DDC84) with a light and a dark shade for the bevel.
+    'a': (61, 220, 132), 'h': (150, 240, 190), 'A': (24, 140, 80),
 }
 N = 16
 
@@ -250,25 +244,70 @@ def skip():
     return c
 
 
-def camera():
+def from_rows(rows):
+    """A hand-drawn icon: 16 strings of 16 palette letters, outline included."""
     c = Canvas()
-    c.rect(1, 4, 14, 13, 'g')
-    c.rect(4, 2, 8, 4, 'g')
-    c.bevel('g', 'w', 'G')
-    c.disc(8, 9, 3.5, 'B')
-    c.disc(8, 9, 2.0, 'c')
-    c.set(12, 5, 'r')
-    c.outline()
+    c.px = [list(r) for r in rows]
     return c
 
 
+def camera():
+    return from_rows([
+        '................',
+        '....kkkkk.......',
+        '...kwwwwwk......',
+        '.kkkwgggGkkkkkk.',
+        'kwwwgggggwwwwwwk',
+        'kwggggggggggrgGk',
+        'kwggggBBBBggggGk',
+        'kwgggBBccBBgggGk',
+        'kwgggBccccBgggGk',
+        'kwgggBccccBgggGk',
+        'kwgggBBccBBgggGk',
+        'kwggggBBBBggggGk',
+        'kwggggggggggggGk',
+        'kwGGGGGGGGGGGGGk',
+        '.kkkkkkkkkkkkkk.',
+        '................',
+    ])
+
+
 def keyboard():
+    return from_rows([
+        '................',
+        '................',
+        '.kkkkkkkkkkkkkk.',
+        'kwwwwwwwwwwwwwwk',
+        'kwggggggggggggGk',
+        'kwgBBgBBgBBgBBGk',
+        'kwgBBgBBgBBgBBGk',
+        'kwggggggggggggGk',
+        'kwgBBgBBgBBgBBGk',
+        'kwgBBgBBgBBgBBGk',
+        'kwgggBBBBBBgggGk',
+        'kwggggggggggggGk',
+        'kwGGGGGGGGGGGGGk',
+        '.kkkkkkkkkkkkkk.',
+        '................',
+        '................',
+    ])
+
+
+def android():
+    """The Android robot's head, as in today's Android logo: a dome with two antennae and
+    two eyes, in Android green. The Android robot is reproduced or modified from work
+    created and shared by Google and used according to terms described in the Creative
+    Commons 3.0 Attribution License."""
     c = Canvas()
-    c.rect(1, 3, 14, 12, 'g')
-    c.bevel('g', 'w', 'G')
-    for x, y in ((3, 5), (6, 5), (9, 5), (12, 5), (3, 8), (6, 8), (9, 8), (12, 8)):
-        c.rect(x, y, x + 1, y + 1, 'B')
-    c.rect(5, 10, 10, 10, 'B')
+    c.disc(8, 13.2, 7.3, 'a')
+    c.rect(0, 13, 15, 15, '.')           # flat bottom: only the upper half of the disc
+    c.bevel('a', 'h', 'A')
+    for x, y in ((4, 5), (3, 4), (2, 3)):    # antennae, leaning outwards
+        c.set(x, y, 'a')
+    for x, y in ((11, 5), (12, 4), (13, 3)):
+        c.set(x, y, 'a')
+    c.rect(4, 9, 5, 10, 'k')             # eyes
+    c.rect(10, 9, 11, 10, 'k')
     c.outline()
     return c
 
@@ -276,7 +315,7 @@ def keyboard():
 ICONS = [('Gear', gear), ('Clock', clock), ('Globe', globe), ('Info', info), ('Check', check),
          ('Monitor', monitor), ('Record', record), ('Stop', stop), ('Folder', folder),
          ('Pencil', pencil), ('Play', play), ('Cross', cross), ('Download', download), ('Skip', skip),
-         ('Camera', camera), ('Keyboard', keyboard)]
+         ('Camera', camera), ('Keyboard', keyboard), ('Android', android)]
 
 
 def write_png(path, width, height, rgba_rows):

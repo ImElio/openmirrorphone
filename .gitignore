@@ -2,3 +2,6 @@ build/
 build-*/
 dist/
 release/
+android/keystore.properties
+android/*.jks
+android/*.keystore

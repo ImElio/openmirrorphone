@@ -1,6 +1,7 @@
 #include "network.h"
 
 #include <winsock2.h>
+#include <ws2tcpip.h>
 #include <iphlpapi.h>
 #include <windows.h>
 #include <shlobj.h>
@@ -32,6 +33,32 @@ std::string find_mac_address() {
     }
     // Locally administered fallback so the receiver still starts without a real adapter.
     return "02:53:43:52:4E:52";
+}
+
+std::string find_ipv4_address() {
+    ULONG size = 16 * 1024;
+    std::vector<unsigned char> buf(size);
+    auto *addrs = reinterpret_cast<IP_ADAPTER_ADDRESSES *>(buf.data());
+    ULONG flags = GAA_FLAG_SKIP_ANYCAST | GAA_FLAG_SKIP_MULTICAST | GAA_FLAG_SKIP_DNS_SERVER |
+                  GAA_FLAG_INCLUDE_GATEWAYS;
+    if (GetAdaptersAddresses(AF_INET, flags, nullptr, addrs, &size) == ERROR_BUFFER_OVERFLOW) {
+        buf.resize(size);
+        addrs = reinterpret_cast<IP_ADAPTER_ADDRESSES *>(buf.data());
+    }
+    if (GetAdaptersAddresses(AF_INET, flags, nullptr, addrs, &size) != NO_ERROR) return {};
+
+    for (auto *adapter = addrs; adapter; adapter = adapter->Next) {
+        bool usable = adapter->OperStatus == IfOperStatusUp && adapter->FirstGatewayAddress &&
+                      (adapter->IfType == IF_TYPE_ETHERNET_CSMACD || adapter->IfType == IF_TYPE_IEEE80211);
+        if (!usable) continue;
+        for (auto *unicast = adapter->FirstUnicastAddress; unicast; unicast = unicast->Next) {
+            if (!unicast->Address.lpSockaddr || unicast->Address.lpSockaddr->sa_family != AF_INET) continue;
+            const auto *address = reinterpret_cast<const sockaddr_in *>(unicast->Address.lpSockaddr);
+            char text[INET_ADDRSTRLEN]{};
+            if (InetNtopA(AF_INET, const_cast<IN_ADDR *>(&address->sin_addr), text, sizeof text)) return text;
+        }
+    }
+    return {};
 }
 
 std::string computer_name() {

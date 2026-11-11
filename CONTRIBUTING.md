@@ -21,8 +21,8 @@ Security problems are the exception: please don't open a public issue, follow
 
 1. Fork the repository and create a branch for your change.
 2. Keep the change focused: one fix or feature per pull request.
-3. Build it with no warnings (`-Wall -Wextra` are on) and test it with a real device,
-   following the [checklist](#testing-checklist).
+3. Build it with no warnings (`-Wall -Wextra` are on) and test the affected flow with an
+   emulator or real device, following the [checklist](#testing-checklist).
 4. In the pull request, say what changed, why, and how you tested it (device, iOS version).
 
 ### Code style
@@ -38,7 +38,8 @@ Security problems are the exception: please don't open a public issue, follow
 
 ### Testing checklist
 
-There are no automated tests yet: changes are tested by hand with a real iPhone or iPad.
+There are no automated app tests yet: changes are checked by hand with an Apple device or an
+Android emulator/device.
 
 - [ ] The PC appears in Screen Mirroring and mirroring starts
 - [ ] Sound plays, and the volume buttons on the device change it
@@ -51,6 +52,17 @@ There are no automated tests yet: changes are tested by hand with a real iPhone 
 - [ ] Stopping mirroring on the device returns to the waiting screen
 - [ ] If you touched the updater: an update from a local feed installs and shows What's New
       (see [Publishing a release](#what-the-auto-updater-expects))
+- [ ] Android: the receiver stays off by default, starts from **Settings > Android**, and stops
+      listening when disabled or when Windows exits
+- [ ] Android: the companion connects with the copied `IP:port`, streams video and supported app playback audio without microphone capture, and can stop
+      sharing from the app or notification
+- [ ] Android: **Stream app audio** disables playback capture, and **Remember PC address** saves
+      or clears the saved receiver address
+- [ ] Android 14+: when sharing one app, leaving it shows a hidden-app notice on Windows and
+      Android; returning to it clears the notice
+- [ ] Android: **Settings > What's New** loads only `android-v*` release notes, offers a newer
+      `-android.apk`, and retains the last fetched notes offline; the Home PayPal banner opens the
+      project donation page
 
 ### Licence
 
@@ -94,6 +106,13 @@ Debug build, to run under gdb:
 MSYSTEM=UCRT64 /c/msys64/usr/bin/bash -lc "cmake -S . -B build-dbg -G Ninja -DCMAKE_BUILD_TYPE=Debug && cmake --build build-dbg"
 PATH="/c/msys64/ucrt64/bin:$PATH" gdb -ex run --args build-dbg/openmirrorphone.exe -d
 ```
+
+### Android companion
+
+The Android app is in `android/`. Open that folder in Android Studio with an Android SDK for API
+36, or run `gradlew.bat assembleDebug` from it. The debug APK is written to
+`android/app/build/outputs/apk/debug/app-debug.apk`. See [android/README.md](android/README.md) for
+setup, current limitations and privacy details.
 
 ### Distributable package
 
@@ -317,6 +336,23 @@ This part is for maintainers.
    gh release create v0.1.0 release/OpenMirrorPhone-0.1.0-setup.exe release/OpenMirrorPhone-0.1.0-win64.zip \
      --title "OpenMirrorPhone 0.1.0" --notes-file release/notes-0.1.0.md
    ```
+
+### Android companion releases
+
+Android has an independent version sequence and release channel. Set `versionName` in
+`android/app/build.gradle.kts` to the Android version and increase `versionCode` for every APK.
+Build and test the signed release APK, then attach it to an Android-specific GitHub release:
+
+```bash
+git tag android-v0.1.0
+gh release create android-v0.1.0 release/OpenMirrorPhone-0.1.0-android.apk \
+  --title "OpenMirrorPhone Android 0.1.0" --notes-file release/notes-android-v0.1.0.md
+```
+
+Keep Windows release tags in the `vX.Y.Z` form and Android tags in the `android-vX.Y.Z` form.
+The Windows updater ignores `android-*`; Android **What's New** scans only stable `android-v*`
+releases and offers a newer APK asset named `OpenMirrorPhone-X.Y.Z-android.apk`. The same Android
+signing key must be used for every APK so users can install updates over the existing app.
 
 The first time, create the repository with
 `gh repo create openmirrorphone --public --source . --push`. In the repository settings,

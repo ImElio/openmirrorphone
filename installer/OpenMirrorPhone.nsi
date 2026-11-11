@@ -34,7 +34,7 @@ VIAddVersionKey "LegalCopyright" "GPLv3"
 !define MUI_ABORTWARNING
 !define MUI_WELCOMEFINISHPAGE_BITMAP "..\build-gui\welcome.bmp" ; made by package.sh from welcome.svg
 
-!define MUI_WELCOMEPAGE_TEXT "This will install ${APP} ${VERSION} on your computer.$\r$\n$\r$\n${APP} shows the screen of your iPhone, iPad or Mac on this PC. It's completely free.$\r$\n$\r$\nNo administrator rights are needed.$\r$\n$\r$\nClick Next to continue."
+!define MUI_WELCOMEPAGE_TEXT "This will install ${APP} ${VERSION} on your computer.$\r$\n$\r$\nMirror iPhone, iPad or Mac over AirPlay. Android mirroring uses the separate companion app.$\r$\n$\r$\nOpenMirrorPhone is free and open source. No administrator rights are needed.$\r$\n$\r$\nClick Next to continue."
 !insertmacro MUI_PAGE_WELCOME
 !insertmacro MUI_PAGE_DIRECTORY
 !insertmacro MUI_PAGE_INSTFILES

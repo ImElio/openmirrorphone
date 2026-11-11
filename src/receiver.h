@@ -45,6 +45,8 @@ public:
         *model = client_model_;
     }
     int connections() const { return connections_; }
+    bool android_streaming() const { return android_streaming_; }
+    void set_android_streaming(bool active) { android_streaming_ = active; }
     const std::string &name() const { return name_; }
 
     // Entry points for the C callbacks in receiver.cpp; not part of the public API.
@@ -54,6 +56,7 @@ public:
     EventSink sink_;
     std::atomic<int> connections_{0};
     std::atomic<bool> video_running_{false};
+    std::atomic<bool> android_streaming_{false};
 
 private:
     raop_s *raop_ = nullptr;

@@ -2,6 +2,7 @@
 // Shows an iPhone/iPad/Mac screen in a window on the PC.
 
 #include "audio_player.h"
+#include "android_receiver.h"
 #include "icons.h"
 #include "keybinds.h"
 #include "network.h"
@@ -52,6 +53,7 @@ namespace {
 
 Uint32 g_receiver_event = 0;
 Uint32 g_update_event = 0;
+Uint32 g_android_visibility_event = 0;
 
 // Why the release list was fetched, and what came back. Sent from the fetch
 // thread to the UI thread as an SDL event (data1).
@@ -96,6 +98,7 @@ struct Ui {
     TTF_Font *body_font = nullptr;  // Segoe UI
     bool showing_video = false;
     bool has_frame = false;
+    bool android_content_hidden = false;
     AVFrame *latest_frame = nullptr; // owned by main; screenshot capture runs on the UI thread
     std::string screenshot_notice;
     Uint32 screenshot_notice_until = 0;
@@ -121,7 +124,7 @@ int draw_text(Ui &ui, TTF_Font *font, const std::string &text, int x, int y, SDL
     return dst.w;
 }
 
-void draw_idle(Ui &ui, const std::string &name, const std::string &status) {
+void draw_idle(Ui &ui, const std::string &name, const std::string &status, const std::string &android_address) {
     int w, h;
     SDL_GetRendererOutputSize(ui.renderer, &w, &h);
     SDL_SetRenderDrawColor(ui.renderer, 0, 0, 0, 255);
@@ -133,6 +136,11 @@ void draw_idle(Ui &ui, const std::string &name, const std::string &status) {
     draw_text(ui, ui.body_font, u8"On your iPhone or iPad, open Control Center, tap Screen Mirroring", w / 2, y + 132,
               kHint);
     draw_text(ui, ui.body_font, u8"and choose \u201c" + name + u8"\u201d.", w / 2, y + 158, kHint);
+    if (!android_address.empty()) {
+        std::string hint = "Android: enter " + android_address + ":" + std::to_string(AndroidReceiver::kPort)
+                         + " in OpenMirrorPhone on your phone.";
+        draw_text(ui, ui.body_font, hint, w / 2, y + 194, kHint);
+    }
 }
 
 bool upload_frame(Ui &ui, const AVFrame *f) {
@@ -176,6 +184,18 @@ void draw_video(Ui &ui) {
         int dw = static_cast<int>(ui.tex_w * scale), dh = static_cast<int>(ui.tex_h * scale);
         SDL_Rect dst{(w - dw) / 2, (h - dh) / 2, dw, dh};
         SDL_RenderCopy(ui.renderer, ui.video, nullptr, &dst);
+    }
+    if (ui.android_content_hidden) {
+        const int panel_w = std::min(w - 40, 520);
+        const int panel_h = 100;
+        SDL_Rect panel{(w - panel_w) / 2, (h - panel_h) / 2, panel_w, panel_h};
+        SDL_SetRenderDrawBlendMode(ui.renderer, SDL_BLENDMODE_BLEND);
+        SDL_SetRenderDrawColor(ui.renderer, 18, 22, 30, 235);
+        SDL_RenderFillRect(ui.renderer, &panel);
+        draw_text(ui, ui.body_font, "The shared app is not visible", w / 2, panel.y + 23,
+                  SDL_Color{245, 245, 245, 255});
+        draw_text(ui, ui.body_font, "Open the app you selected on Android to resume mirroring.", w / 2,
+                  panel.y + 55, SDL_Color{190, 195, 205, 255});
     }
 }
 
@@ -325,6 +345,7 @@ int main(int argc, char **argv) {
     TTF_Init();
     g_receiver_event = SDL_RegisterEvents(1);
     g_update_event = SDL_RegisterEvents(1);
+    g_android_visibility_event = SDL_RegisterEvents(1);
 
     Ui ui;
     ui.window = SDL_CreateWindow("OpenMirrorPhone", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1024, 640,
@@ -366,6 +387,27 @@ int main(int argc, char **argv) {
     });
 
     receiver.set_debug_log(debug_log);
+    AndroidReceiver android_receiver(video, audio, recorder,
+                                     [&] { return receiver.connections() == 0 && !receiver.android_streaming(); },
+                                     [&](bool connected) {
+                                         receiver.set_android_streaming(connected);
+                                         if (connected) receiver.set_client("Android device", "Android");
+                                         SDL_Event ev{};
+                                         ev.type = g_receiver_event;
+                                         ev.user.code = static_cast<int>(connected ? Receiver::Event::VideoStarted
+                                                                                  : Receiver::Event::VideoStopped);
+                                         SDL_PushEvent(&ev);
+                                     },
+                                     [&](bool visible) {
+                                         SDL_Event ev{};
+                                         ev.type = g_android_visibility_event;
+                                         ev.user.code = visible ? 1 : 0;
+                                         SDL_PushEvent(&ev);
+                                     });
+    if (load_setting("android_support") == "1" && !android_receiver.start()) {
+        std::fprintf(stderr, "[android] Android support was enabled but the receiver could not start.\n");
+    }
+    const std::string android_address = android_receiver.address();
     const std::string kWaiting = u8"Waiting for a device\u2026";
     const std::string kNoBonjour = "Cannot start: the Apple Bonjour service is required";
     std::string status = kWaiting;
@@ -444,6 +486,16 @@ int main(int argc, char **argv) {
         host.set_audio_output_device = [&](const std::string &device) {
             if (!audio.set_output_device(device)) return false;
             save_setting("audio_output", device);
+            return true;
+        };
+        host.android_support_enabled = [&] { return android_receiver.running(); };
+        host.set_android_support_enabled = [&](bool enabled) {
+            if (enabled) {
+                if (!android_receiver.start()) return false;
+            } else {
+                android_receiver.stop();
+            }
+            save_setting("android_support", enabled ? "1" : "0");
             return true;
         };
         host.take_screenshot = [&] {
@@ -604,6 +656,7 @@ int main(int argc, char **argv) {
                         pending_recording.clear();
                         ui.showing_video = true;
                         ui.has_frame = false;
+                        ui.android_content_hidden = false;
                         break;
                     }
                     case Receiver::Event::VideoStopped:
@@ -611,12 +664,14 @@ int main(int argc, char **argv) {
                         end_session();
                         ui.showing_video = false;
                         ui.has_frame = false;
+                        ui.android_content_hidden = false;
                         status = kWaiting;
                         break;
                     case Receiver::Event::ConnectionLost:
                         end_session();
                         ui.showing_video = false;
                         ui.has_frame = false;
+                        ui.android_content_hidden = false;
                         status = u8"Connection lost, waiting\u2026";
                         receiver.restart_after_reset();
                         break;
@@ -626,6 +681,9 @@ int main(int argc, char **argv) {
                     auto *result = static_cast<FetchResult *>(e.user.data1);
                     on_releases(*result);
                     delete result;
+                    dirty = true;
+                } else if (e.type == g_android_visibility_event) {
+                    ui.android_content_hidden = e.user.code == 0;
                     dirty = true;
                 }
             } while (SDL_PollEvent(&e));
@@ -649,7 +707,7 @@ int main(int argc, char **argv) {
         }
         if (dirty) {
             if (ui.showing_video) draw_video(ui);
-            else draw_idle(ui, name, status);
+            else draw_idle(ui, name, status, android_receiver.running() ? android_address : std::string());
             draw_rec(ui, recorder);
             draw_settings_button(ui);
             draw_screenshot_notice(ui);
@@ -660,6 +718,7 @@ int main(int argc, char **argv) {
     }
 
     end_session();
+    android_receiver.stop();
     receiver.stop();
     av_frame_free(&frame);
     if (ui.video) SDL_DestroyTexture(ui.video);

@@ -1,0 +1,20 @@
+<resources>
+    <style name="AppTheme" parent="android:style/Theme.Material.NoActionBar">
+        <item name="android:fontFamily">sans-serif</item>
+        <item name="android:colorAccent">#3FA9FF</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowActionModeOverlay">true</item>
+        <!-- Same night blue as the intro, so there is no flash before it starts. -->
+        <item name="android:windowBackground">@color/night</item>
+    </style>
+
+    <style name="ScannerTheme" parent="AppTheme">
+        <item name="android:windowActionModeOverlay">true</item>
+        <item name="android:colorAccent">#53B7FF</item>
+        <item name="android:statusBarColor">#0B1220</item>
+        <item name="android:navigationBarColor">#0B1220</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+</resources>

@@ -196,6 +196,14 @@ void AudioPlayer::play(unsigned char ct, const uint8_t *data, int size) {
     }
 }
 
+void AudioPlayer::play_pcm(const uint8_t *data, int size) {
+    if (!data || size <= 0 || size % (kChannels * static_cast<int>(sizeof(int16_t))) != 0) return;
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (!device_) return;
+    if (SDL_GetQueuedAudioSize(device_) > kMaxQueuedBytes) SDL_ClearQueuedAudio(device_);
+    SDL_QueueAudio(device_, data, static_cast<Uint32>(size));
+}
+
 void AudioPlayer::flush() {
     std::lock_guard<std::mutex> lock(mutex_);
     if (device_) SDL_ClearQueuedAudio(device_);

@@ -1,0 +1,97 @@
+<resources>
+    <string name="app_name">OpenMirrorPhone</string>
+    <string name="intro_tagline">Your phone, on your PC</string>
+    <string name="action_back">Back</string>
+
+    <!-- Home -->
+    <string name="home_title">Your phone,\non your PC.</string>
+    <string name="home_subtitle">Mirror this Android screen to OpenMirrorPhone on Windows. No account needed.</string>
+    <string name="capture_title">Screen capture</string>
+    <string name="capture_description">Scan the QR code in Windows to save this PC, or enter its address. Tap Start capture when you are ready to share. Supported app audio can stream too; the microphone is not captured.</string>
+    <string name="home_help_link">How does it work?</string>
+
+    <!-- Help -->
+    <string name="help_title">Help</string>
+    <string name="steps_title">How it works</string>
+    <string name="step_1_title">Open OpenMirrorPhone on your PC</string>
+    <string name="step_1_text">The free Windows app, the same one used by iPhone.</string>
+    <string name="step_2_title">Join the same Wi-Fi</string>
+    <string name="step_2_text">Phone and PC need to be on the same network.</string>
+    <string name="step_3_title">Tap Start capture and approve</string>
+    <string name="step_3_text">Android asks before anything on screen is captured.</string>
+    <string name="help_today_title">What works today</string>
+    <string name="help_today_text">Open the Windows receiver and scan its QR code here to save the PC address. This does not start sharing. Tap Start capture when ready, then approve Android screen sharing and, if enabled, audio capture. Video and supported app audio stream over your local network. Automatic PC discovery is not included yet; some apps may block audio capture.</string>
+    <string name="help_privacy_title">Privacy</string>
+    <string name="help_privacy_text">Android asks before screen capture starts. When Stream app audio is enabled, it requests audio permission for app playback capture, not microphone recording. Captured screen and supported app audio go directly to the PC on your local network and are not encrypted. Use a trusted network. A persistent notification lets you stop sharing.</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_capture">Capture</string>
+    <string name="setting_capture_audio_title">Stream app audio</string>
+    <string name="setting_capture_audio_text">Include supported app playback in the stream to your PC.</string>
+    <string name="setting_remember_address_title">Remember PC address</string>
+    <string name="setting_remember_address_text">Save the Windows receiver address on this device.</string>
+    <string name="settings_help_text">Setup steps, what works today, privacy</string>
+    <string name="settings_updates">Updates</string>
+    <string name="settings_whats_new_title">What\'s New</string>
+    <string name="settings_whats_new_text">Read the latest release notes from GitHub</string>
+    <string name="settings_about">About</string>
+    <string name="settings_version">Version %1$s</string>
+    <string name="whats_new_intro">Changes included in the latest Android companion release.</string>
+    <string name="whats_new_loading">Loading release notes from GitHub...</string>
+    <string name="whats_new_from_github">Latest Android release notes from GitHub</string>
+    <string name="whats_new_cached">Showing saved notes while checking GitHub...</string>
+    <string name="whats_new_latest_version">Latest release · %1$s</string>
+    <string name="whats_new_latest_android_version">Latest Android release: %1$s</string>
+    <string name="whats_new_download_android">Download Android update</string>
+    <string name="whats_new_empty">No release notes were published for this version.</string>
+    <string name="whats_new_error">Could not load release notes: %1$s</string>
+    <string name="whats_new_cached_error">Could not refresh from GitHub (%1$s). Showing saved notes.</string>
+    <string name="whats_new_network_error">No network connection</string>
+    <string name="whats_new_no_release">No Android release is available yet.</string>
+    <string name="whats_new_http_error">GitHub returned HTTP %1$d.</string>
+    <string name="whats_new_invalid_response">GitHub returned invalid release data.</string>
+    <string name="whats_new_response_too_large">GitHub response was too large.</string>
+    <string name="whats_new_browser_error">No browser is available to open GitHub.</string>
+    <string name="whats_new_view_github">View release on GitHub</string>
+    <string name="whats_new_refresh">Refresh release notes</string>
+    <string name="support_development">Support development</string>
+    <string name="support_paypal_description">Support OpenMirrorPhone development with PayPal</string>
+    <string name="support_paypal_unavailable">No browser or PayPal app is available.</string>
+
+    <!-- Screen capture -->
+    <string name="capture_channel_name">Screen sharing</string>
+    <string name="capture_notification_title">OpenMirrorPhone is sharing your screen</string>
+    <string name="capture_notification_text">Tap Stop to end screen sharing.</string>
+    <string name="status_screen_sharing_off">Capture is off.</string>
+    <string name="status_capture_permission_denied">Screen sharing was not approved.</string>
+    <string name="status_screen_sharing_stopped">Screen sharing stopped.</string>
+    <string name="status_stopped_by_android">Screen sharing stopped by Android.</string>
+    <string name="status_capture_access_missing">Android did not provide screen-sharing access.</string>
+    <string name="status_capture_start_failed">Could not start screen capture: %1$s</string>
+    <string name="status_capture_active">Streaming video and available app audio to the PC.</string>
+    <string name="status_video_only">Streaming video only. App audio is off.</string>
+    <string name="status_audio_unavailable">Video is streaming; Android could not capture app audio. Some apps block capture.</string>
+    <string name="status_capture_app_hidden">The selected app is hidden. Return to it to resume mirroring.</string>
+    <string name="status_connecting_to_pc">Connecting to the PC…</string>
+    <string name="status_connection_failed">Could not connect to the PC.</string>
+    <string name="status_pc_address_missing">Enter the PC address shown in OpenMirrorPhone.</string>
+    <string name="pc_address_label">Windows PC address</string>
+    <string name="pc_address_hint">IP address:port</string>
+    <string name="pc_address_required">Enter the PC address shown in OpenMirrorPhone.</string><string name="status_waiting_for_approval">Waiting for Android’s approval…</string>
+    <string name="action_scan_qr">Scan QR</string>
+    <string name="scan_qr_prompt">Scan the QR code shown in OpenMirrorPhone for Windows.</string>
+    <string name="scan_qr_title">Connect to a PC</string>
+    <string name="scan_qr_instruction">Place the QR code inside the square</string>
+    <string name="action_close_scanner">Close QR scanner</string>
+    <string name="scan_qr_saved">PC saved. Tap Start capture when you are ready.</string>
+    <string name="scan_qr_invalid">This QR code is not a valid OpenMirrorPhone receiver address.</string>
+    <string name="action_test_capture">Start capture</string>
+    <string name="action_stop_capture">Stop capture</string>
+    <string name="action_waiting_for_approval">Waiting for approval…</string>
+    <string name="status_waiting_for_notifications">Checking notification permission…</string>
+    <string name="status_notifications_disabled">Notifications are off; stop sharing from this app or Windows.</string>
+    <string name="audio_permission_denied_title">App audio permission</string>
+    <string name="audio_permission_denied_message">OpenMirrorPhone needs Android audio permission to send playback from supported apps. It does not use the microphone. You can continue with video only.</string>
+    <string name="action_continue_video_only">Continue video only</string>
+</resources>

@@ -8,6 +8,7 @@
 #include <plist/plist.h>
 
 #include <algorithm>
+#include <cctype>
 #include <cstdio>
 #include <cstdlib>
 #include <sstream>
@@ -230,8 +231,9 @@ bool fetch_releases(std::vector<Release> *releases, std::string *error) {
         if (plist_get_node_type(r) != PLIST_DICT || dict_bool(r, "draft") || dict_bool(r, "prerelease")) continue;
         Release rel;
         rel.version = dict_string(r, "tag_name");
+        if (rel.version.rfind("android-", 0) == 0) continue; // Android companion has its own release channel.
         if (!rel.version.empty() && (rel.version[0] == 'v' || rel.version[0] == 'V')) rel.version.erase(0, 1);
-        if (rel.version.empty()) continue;
+        if (rel.version.empty() || !std::isdigit(static_cast<unsigned char>(rel.version[0]))) continue;
         rel.notes = dict_string(r, "body");
         plist_t assets = plist_dict_get_item(r, "assets");
         for (uint32_t j = 0; assets && j < plist_array_get_size(assets); ++j) {

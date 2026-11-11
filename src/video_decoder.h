@@ -15,7 +15,8 @@ public:
 
     // Called from the AirPlay mirror thread.
     bool set_codec(bool h265);
-    void decode(const uint8_t *data, int size);
+    // Returns true when one or more complete frames were decoded.
+    bool decode(const uint8_t *data, int size);
     void reset();
 
     // Called from the UI thread. Moves the newest frame into `out` (an allocated

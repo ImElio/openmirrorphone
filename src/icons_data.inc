@@ -18,6 +18,9 @@ PALETTE('y', 255, 255, 0)
 PALETTE('o', 128, 128, 0)
 PALETTE('f', 255, 255, 160)
 PALETTE('p', 255, 160, 160)
+PALETTE('a', 61, 220, 132)
+PALETTE('h', 150, 240, 190)
+PALETTE('A', 24, 140, 80)
 
 ICON(Gear,
     ".......kk......."
@@ -303,6 +306,24 @@ ICON(Keyboard,
     "kwgggBBBBBBgggGk"
     "kwggggggggggggGk"
     "kwGGGGGGGGGGGGGk"
+    ".kkkkkkkkkkkkkk."
+    "................"
+    "................"
+)
+ICON(Android,
+    "................"
+    "................"
+    "..k..........k.."
+    ".kak........kak."
+    "..kak......kak.."
+    "...kakkkkkkak..."
+    "...kkhhhhhhkk..."
+    "..khhaaaaaahhk.."
+    ".khaaaaaaaaaahk."
+    ".khakkaaaakkaAk."
+    "khaakkaaaakkaahk"
+    "khaaaaaaaaaaaaAk"
+    "khAAAAAAAAAAAAAk"
     ".kkkkkkkkkkkkkk."
     "................"
     "................"
