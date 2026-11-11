@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The OpenMirrorPhone logo (assets/logo.svg): a phone casting its screen to a monitor. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="512"
+    android:viewportHeight="512">
+    <path android:pathData="M112,0h288a112,112 0,0 1,112 112v288a112,112 0,0 1,-112 112H112A112,112 0,0 1,0 400V112A112,112 0,0 1,112 0z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="linear" android:startX="0" android:startY="0" android:endX="512" android:endY="512">
+                <item android:offset="0" android:color="#FF08B9ED" />
+                <item android:offset="0.48" android:color="#FF087CFA" />
+                <item android:offset="1" android:color="#FF0839DC" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <!-- Monitor -->
+    <path android:fillColor="#FFFFFFFF"
+        android:pathData="M175,123h261a18,18 0,0 1,18 18v201a18,18 0,0 1,-18 18H175a18,18 0,0 1,-18 -18V141a18,18 0,0 1,18 -18z" />
+    <path android:pathData="M181,138h249a9,9 0,0 1,9 9v187a9,9 0,0 1,-9 9H181a9,9 0,0 1,-9 -9V147a9,9 0,0 1,9 -9z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="linear" android:startX="172" android:startY="138" android:endX="439" android:endY="343">
+                <item android:offset="0" android:color="#FF083C97" />
+                <item android:offset="1" android:color="#FF061D58" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <path android:fillColor="#FFFFFFFF"
+        android:pathData="M279,360h51l7,22h33q5,0 5,6v6H234v-6q0,-6 6,-6h32z" />
+    <!-- Phone -->
+    <path android:fillColor="#FFFFFFFF"
+        android:pathData="M92,171h78a27,27 0,0 1,27 27v174a27,27 0,0 1,-27 27H92a27,27 0,0 1,-27 -27V198a27,27 0,0 1,27 -27z" />
+    <path android:pathData="M94,179h74a21,21 0,0 1,21 21v170a21,21 0,0 1,-21 21H94a21,21 0,0 1,-21 -21V200a21,21 0,0 1,21 -21z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="linear" android:startX="73" android:startY="179" android:endX="189" android:endY="391">
+                <item android:offset="0" android:color="#FF083C97" />
+                <item android:offset="1" android:color="#FF061D58" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <path android:fillColor="#FFFFFFFF" android:pathData="M111,179h39v7q0,6 -6,6h-27q-6,0 -6,-6z" />
+    <!-- Mirroring waves -->
+    <path android:strokeColor="#FFFFFFFF" android:strokeWidth="13" android:strokeLineCap="round"
+        android:pathData="M215,250q28,18 28,47" />
+    <path android:strokeColor="#FFFFFFFF" android:strokeWidth="13" android:strokeLineCap="round"
+        android:pathData="M225,223q49,29 49,78" />
+    <path android:strokeColor="#FFFFFFFF" android:strokeWidth="13" android:strokeLineCap="round"
+        android:pathData="M237,197q70,43 70,104" />
+</vector>
