@@ -14,7 +14,7 @@ CAPTION "Settings"
 FONT 9, "Segoe UI", 400, 0, 1
 BEGIN
   // Sidebar (x 0-112): page list, donation, exit. Its width is SIDEBAR_DLU in settings_dialog.cpp.
-  LISTBOX       IDC_SETTINGS_NAV, 6, 8, 100, 150,
+  LISTBOX       IDC_SETTINGS_NAV, 6, 8, 100, 172,
                 LBS_NOTIFY | LBS_NOINTEGRALHEIGHT | LBS_OWNERDRAWFIXED | LBS_HASSTRINGS | WS_TABSTOP
   LTEXT         "Support development", -1, 8, 210, 98, 9
   CONTROL       "", IDC_DONATE, "Button", BS_OWNERDRAW | WS_TABSTOP, 6, 221, 100, 30
@@ -55,6 +55,21 @@ BEGIN
   EDITTEXT      IDC_KEY_SETTINGS, 286, 159, 120, 16, ES_AUTOHSCROLL | ES_READONLY | ES_CENTER | WS_TABSTOP
   PUSHBUTTON    "Restore defaults", IDC_KEYBINDS_DEFAULTS, 138, 202, 94, 16
 
+  // Android setup
+  LTEXT         "Android", IDC_ANDROID_TITLE, 124, 8, 296, 14
+  LTEXT         "Connect the Android companion to this PC over your local network.", IDC_ANDROID_INFO,
+                124, 24, 296, 9
+  AUTOCHECKBOX  "Enable Android support", IDC_ANDROID_ENABLE, 134, 40, 142, 12
+  LTEXT         "Disabled", IDC_ANDROID_STATUS, 280, 42, 132, 9
+  GROUPBOX      "This PC", IDC_ANDROID_CONNECTION_GROUP, 124, 56, 298, 48
+  LTEXT         "Address", IDC_ANDROID_ADDRESS_LABEL, 134, 73, 42, 9
+  EDITTEXT      IDC_ANDROID_ADDRESS, 180, 69, 144, 16, ES_AUTOHSCROLL | ES_READONLY
+  PUSHBUTTON    "&Copy", IDC_ANDROID_COPY, 332, 69, 80, 16
+  GROUPBOX      "Set up screen sharing", IDC_ANDROID_SETUP_GROUP, 124, 110, 298, 112
+  LTEXT         "1. Connect your phone and PC to the same Wi-Fi network.\n\n2. In the Android app, tap Scan QR code and point the camera at the code.\n\n3. Tap Start capture and approve Android's prompts.",
+                IDC_ANDROID_STEPS, 134, 123, 172, 90
+  CONTROL       "", IDC_ANDROID_QR, "STATIC", SS_OWNERDRAW, 318, 122, 90, 90
+
   // Session history
   LTEXT         "Session history", IDC_HISTORY_TITLE, 124, 8, 296, 14
   LTEXT         "Rename, play or remove past mirroring sessions.", IDC_HISTORY_INFO, 124, 24, 296, 9
@@ -82,8 +97,8 @@ BEGIN
   LTEXT         "The app and the project.", IDC_ABOUT_INFO, 124, 24, 296, 9
   GROUPBOX      "", IDC_ABOUT_GROUP, 124, 40, 298, 92
   LTEXT         "OpenMirrorPhone", IDC_ABOUT_PRODUCT, 134, 56, 278, 16
-  LTEXT         "Version 0.1.1", IDC_ABOUT_VERSION, 134, 74, 278, 9
-  LTEXT         "Mirror your iPhone, iPad or Mac screen to this PC. No app is needed on the phone.\n\nFree and open source, licensed under the GPLv3.",
+  LTEXT         "Version 0.1.2", IDC_ABOUT_VERSION, 134, 74, 278, 9
+  LTEXT         "Mirror iPhone, iPad or Mac over AirPlay, or Android with the companion app.\n\nFree and open source, licensed under the GPLv3.",
                 IDC_ABOUT_DESCRIPTION, 134, 90, 278, 36
 
   PUSHBUTTON    "Close", IDCANCEL, 362, 240, 60, 15
@@ -111,17 +126,17 @@ BEGIN
   LTEXT         "Welcome to OpenMirrorPhone!", IDC_WELCOME_TITLE, 12, 10, 266, 14
   LTEXT         "OpenMirrorPhone is completely free. There are no paid features, no ads and no time limits: everything is included, and it will stay that way.",
                 -1, 12, 30, 266, 18
-  LTEXT         "To get started, open Control Center on your iPhone or iPad, tap Screen Mirroring and choose this PC.",
-                -1, 12, 54, 266, 18
-  LTEXT         "If you find it useful and would like to support its development, you can make a donation with PayPal. Thank you!",
-                -1, 12, 78, 266, 18
-  CONTROL       "Donate with PayPal", IDC_DONATE, "Button", BS_OWNERDRAW | WS_TABSTOP, 75, 100, 140, 44
+  LTEXT         "iPhone or iPad: open Control Center, tap Screen Mirroring and choose this PC.\nAndroid: install the companion app, then set it up in Settings > Android.",
+                -1, 12, 54, 266, 36
+  LTEXT         "If you find it useful, you can support its development with a PayPal donation. Thank you!",
+                -1, 12, 94, 266, 18
+  CONTROL       "Donate with PayPal", IDC_DONATE, "Button", BS_OWNERDRAW | WS_TABSTOP, 75, 114, 140, 40
   DEFPUSHBUTTON "Get started", IDOK, 203, 162, 75, 15
 END
 
 VS_VERSION_INFO VERSIONINFO
-FILEVERSION     0,1,0,0
-PRODUCTVERSION  0,1,0,0
+FILEVERSION     0,1,2,0
+PRODUCTVERSION  0,1,2,0
 FILEOS          VOS_NT_WINDOWS32
 FILETYPE        VFT_APP
 BEGIN
@@ -131,8 +146,8 @@ BEGIN
     BEGIN
       VALUE "ProductName",      "OpenMirrorPhone"
       VALUE "FileDescription",  "OpenMirrorPhone - screen mirroring receiver"
-      VALUE "FileVersion",      "0.1.1"
-      VALUE "ProductVersion",   "0.1.1"
+      VALUE "FileVersion",      "0.1.2"
+      VALUE "ProductVersion",   "0.1.2"
       VALUE "OriginalFilename", "OpenMirrorPhone.exe"
       VALUE "LegalCopyright",   "GPLv3"
     END

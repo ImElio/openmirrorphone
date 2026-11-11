@@ -1,5 +1,6 @@
 #include "settings_dialog.h"
 
+#include "android_receiver.h"
 #include "icons.h"
 #include "network.h"
 #include "paypal_banner.h"
@@ -9,11 +10,13 @@
 #include "theme.h"
 #include "update_dialog.h"
 #include "updater.h"
+#include "qrcodegen.hpp"
 
 #include <windows.h>
 #include <commctrl.h>
 #include <shellapi.h>
 
+#include <algorithm>
 #include <cstdio>
 #include <fstream>
 #include <iterator>
@@ -45,6 +48,7 @@ struct SettingsState {
     HWND capture_control = nullptr;
     std::vector<Release> releases; // from GitHub, newest first
     Release offer;                 // newer version found by the check, if any
+    std::string android_address;
 };
 
 // The release list, fetched off the UI thread for the Updates page.
@@ -70,7 +74,7 @@ bool in_sidebar(HWND dlg, HWND control, int sidebar_px) {
 }
 
 // Pixel-art icons of the sidebar pages, in page order.
-const Icon kPageIcons[] = {Icon::Gear, Icon::Clock, Icon::Globe, Icon::Keyboard, Icon::Info};
+const Icon kPageIcons[] = {Icon::Gear, Icon::Clock, Icon::Globe, Icon::Android, Icon::Keyboard, Icon::Info};
 
 SettingsState &state_of(HWND dlg) { return *reinterpret_cast<SettingsState *>(GetWindowLongPtrW(dlg, DWLP_USER)); }
 SettingsHost &host_of(HWND dlg) { return *state_of(dlg).host; }
@@ -86,6 +90,10 @@ void show_page(HWND dlg, int page) {
     static const int updates[] = {IDC_UPDATES_TITLE,     IDC_UPDATES_INFO,  IDC_UPDATES_GROUP,
                                   IDC_AUTO_UPDATE,       IDC_CHECK_UPDATES_NOW, IDC_UPDATE_STATUS,
                                   IDC_WHATS_NEW_GROUP,   IDC_WHATS_NEW_TEXT};
+    static const int android[] = {IDC_ANDROID_TITLE, IDC_ANDROID_INFO, IDC_ANDROID_CONNECTION_GROUP,
+                                  IDC_ANDROID_ADDRESS_LABEL, IDC_ANDROID_ADDRESS, IDC_ANDROID_COPY,
+                                  IDC_ANDROID_SETUP_GROUP, IDC_ANDROID_STEPS, IDC_ANDROID_QR,
+                                  IDC_ANDROID_ENABLE, IDC_ANDROID_STATUS};
     static const int about[] = {IDC_ABOUT_TITLE,   IDC_ABOUT_INFO,    IDC_ABOUT_GROUP,
                                 IDC_ABOUT_PRODUCT, IDC_ABOUT_VERSION, IDC_ABOUT_DESCRIPTION};
     static const int keybinds[] = {IDC_KEYBINDS_TITLE, IDC_KEYBINDS_INFO, IDC_KEYBINDS_GROUP,
@@ -99,12 +107,48 @@ void show_page(HWND dlg, int page) {
     show(general, sizeof general / sizeof general[0], page == 0);
     show(history, sizeof history / sizeof history[0], page == 1);
     show(updates, sizeof updates / sizeof updates[0], page == 2);
-    show(keybinds, sizeof keybinds / sizeof keybinds[0], page == 3);
-    show(about, sizeof about / sizeof about[0], page == 4);
+    show(android, sizeof android / sizeof android[0], page == 3);
+    show(keybinds, sizeof keybinds / sizeof keybinds[0], page == 4);
+    show(about, sizeof about / sizeof about[0], page == 5);
 }
 
 int message(HWND owner, const char *text, UINT flags) {
     return MessageBoxW(owner, to_wide(text).c_str(), L"OpenMirrorPhone", flags);
+}
+
+void copy_text(HWND owner, const std::wstring &text) {
+    if (!OpenClipboard(owner)) return;
+    EmptyClipboard();
+    HGLOBAL memory = GlobalAlloc(GMEM_MOVEABLE, (text.size() + 1) * sizeof(wchar_t));
+    if (memory) {
+        auto *data = static_cast<wchar_t *>(GlobalLock(memory));
+        if (data) {
+            std::copy(text.begin(), text.end(), data);
+            data[text.size()] = L'\0';
+            GlobalUnlock(memory);
+            if (!SetClipboardData(CF_UNICODETEXT, memory)) GlobalFree(memory);
+        } else {
+            GlobalFree(memory);
+        }
+    }
+    CloseClipboard();
+}
+
+void update_android_controls(HWND dlg) {
+    SettingsHost &host = host_of(dlg);
+    const bool enabled = host.android_support_enabled && host.android_support_enabled();
+    const std::string ip = find_ipv4_address();
+    const bool has_address = !ip.empty();
+    const std::string address = has_address ? ip + ":" + std::to_string(AndroidReceiver::kPort) : "";
+    state_of(dlg).android_address = enabled ? address : std::string();
+    SetDlgItemTextW(dlg, IDC_ANDROID_ADDRESS, to_wide(address).c_str());
+    SetDlgItemTextW(dlg, IDC_ANDROID_STATUS,
+                    enabled ? (has_address ? L"Ready for a connection" : L"No active network adapter") : L"Disabled");
+    CheckDlgButton(dlg, IDC_ANDROID_ENABLE, enabled ? BST_CHECKED : BST_UNCHECKED);
+    EnableWindow(GetDlgItem(dlg, IDC_ANDROID_ADDRESS), enabled && has_address);
+    EnableWindow(GetDlgItem(dlg, IDC_ANDROID_COPY), enabled && has_address);
+    ShowWindow(GetDlgItem(dlg, IDC_ANDROID_QR), enabled && has_address ? SW_SHOW : SW_HIDE);
+    InvalidateRect(GetDlgItem(dlg, IDC_ANDROID_QR), nullptr, TRUE);
 }
 
 std::string format_date(std::time_t t) {
@@ -425,8 +469,8 @@ INT_PTR CALLBACK settings_proc(HWND dlg, UINT msg, WPARAM wp, LPARAM lp) {
             title_lf.lfWeight = FW_SEMIBOLD;
             title_lf.lfHeight = title_lf.lfHeight * 14 / 10;
             state.title_font = CreateFontIndirectW(&title_lf);
-            for (int id : {IDC_GENERAL_TITLE, IDC_HISTORY_TITLE, IDC_UPDATES_TITLE, IDC_KEYBINDS_TITLE,
-                           IDC_ABOUT_TITLE, IDC_ABOUT_PRODUCT})
+            for (int id : {IDC_GENERAL_TITLE, IDC_HISTORY_TITLE, IDC_UPDATES_TITLE, IDC_ANDROID_TITLE,
+                           IDC_KEYBINDS_TITLE, IDC_ABOUT_TITLE, IDC_ABOUT_PRODUCT})
                 SendDlgItemMessageW(dlg, id, WM_SETFONT, reinterpret_cast<WPARAM>(state.title_font), TRUE);
         }
         RECT sidebar_rc{0, 0, kSidebarDlu, 0};
@@ -453,7 +497,8 @@ INT_PTR CALLBACK settings_proc(HWND dlg, UINT msg, WPARAM wp, LPARAM lp) {
         SendMessageW(audio_combo, CB_SETCURSEL, audio_selection, 0);
         SetDlgItemTextW(dlg, IDC_RECORDING, host.recording() ? L"Stop recording" : L"Start recording");
         SetDlgItemTextW(dlg, IDC_ABOUT_VERSION, (L"Version " + to_wide(OMP_VERSION)).c_str());
-        const wchar_t *pages[] = {L"General", L"Session history", L"Updates", L"Keybinds", L"About"};
+        update_android_controls(dlg);
+        const wchar_t *pages[] = {L"General", L"Session history", L"Updates", L"Android", L"Keybinds", L"About"};
         for (const wchar_t *page : pages) SendDlgItemMessageW(dlg, IDC_SETTINGS_NAV, LB_ADDSTRING, 0,
                                                                reinterpret_cast<LPARAM>(page));
         HWND navigation = GetDlgItem(dlg, IDC_SETTINGS_NAV);
@@ -495,6 +540,31 @@ INT_PTR CALLBACK settings_proc(HWND dlg, UINT msg, WPARAM wp, LPARAM lp) {
         switch (LOWORD(wp)) {
         case IDOK: // Enter
         case IDC_APPLY: apply_name(dlg); return TRUE;
+        case IDC_ANDROID_COPY: {
+            const std::string ip = find_ipv4_address();
+            if (ip.empty()) {
+                message(dlg, "No active network address is available. Connect this PC to a network and try again.",
+                        MB_ICONWARNING);
+                return TRUE;
+            }
+            const std::string address = ip + ":" + std::to_string(AndroidReceiver::kPort);
+            copy_text(dlg, to_wide(address));
+            SetDlgItemTextW(dlg, IDC_ANDROID_ADDRESS, to_wide(address).c_str());
+            return TRUE;
+        }
+        case IDC_ANDROID_ENABLE: {
+            SettingsHost &host = host_of(dlg);
+            const bool enable = IsDlgButtonChecked(dlg, IDC_ANDROID_ENABLE) == BST_CHECKED;
+            if (!host.set_android_support_enabled || !host.set_android_support_enabled(enable)) {
+                update_android_controls(dlg);
+                message(dlg,
+                        "Could not start the Android receiver. Check that port 24862 is available, then try again.",
+                        MB_ICONWARNING);
+            } else {
+                update_android_controls(dlg);
+            }
+            return TRUE;
+        }
         case IDC_RENAME: {
             int sel = selected(dlg);
             if (sel >= 0) {
@@ -648,6 +718,40 @@ INT_PTR CALLBACK settings_proc(HWND dlg, UINT msg, WPARAM wp, LPARAM lp) {
             SetWindowLongPtrW(dlg, DWLP_MSGRESULT, TRUE);
             return TRUE;
         }
+        if (wp == IDC_ANDROID_QR) {
+            auto *item = reinterpret_cast<DRAWITEMSTRUCT *>(lp);
+            FillRect(item->hDC, &item->rcItem, reinterpret_cast<HBRUSH>(GetStockObject(WHITE_BRUSH)));
+            const std::string &address = state_of(dlg).android_address;
+            if (!address.empty()) {
+                try {
+                    const qrcodegen::QrCode qr = qrcodegen::QrCode::encodeText(
+                        address.c_str(), qrcodegen::QrCode::Ecc::MEDIUM);
+                    const int modules = qr.getSize();
+                    const int side = std::min(item->rcItem.right - item->rcItem.left,
+                                              item->rcItem.bottom - item->rcItem.top) - 12;
+                    const int total = modules + 8; // four-module quiet zone on each side
+                    const int origin_x = item->rcItem.left + ((item->rcItem.right - item->rcItem.left) - side) / 2;
+                    const int origin_y = item->rcItem.top + ((item->rcItem.bottom - item->rcItem.top) - side) / 2;
+                    HBRUSH black = CreateSolidBrush(RGB(0, 0, 0));
+                    for (int y = 0; y < modules; ++y) {
+                        for (int x = 0; x < modules; ++x) {
+                            if (!qr.getModule(x, y)) continue;
+                            RECT module{
+                                origin_x + (x + 4) * side / total,
+                                origin_y + (y + 4) * side / total,
+                                origin_x + (x + 5) * side / total,
+                                origin_y + (y + 5) * side / total,
+                            };
+                            FillRect(item->hDC, &module, black);
+                        }
+                    }
+                    DeleteObject(black);
+                } catch (...) {
+                    // Keep the QR area blank if address encoding fails.
+                }
+            }
+            return TRUE;
+        }
         break;
     case WM_ERASEBKGND: {
         // Page colour on the right, sidebar colour on the left, a thin divider between.
@@ -686,7 +790,9 @@ INT_PTR CALLBACK settings_proc(HWND dlg, UINT msg, WPARAM wp, LPARAM lp) {
         }
         int id = GetDlgCtrlID(control);
         bool secondary = id == IDC_GENERAL_INFO || id == IDC_HISTORY_INFO || id == IDC_UPDATES_INFO ||
-                         id == IDC_ABOUT_INFO || id == IDC_NAME_NOTE || id == IDC_ABOUT_VERSION ||
+                         id == IDC_ABOUT_INFO || id == IDC_ANDROID_INFO ||
+                         id == IDC_ANDROID_STATUS ||
+                         id == IDC_NAME_NOTE || id == IDC_ABOUT_VERSION ||
                          id == IDC_UPDATE_STATUS;
         SetTextColor(dc, secondary ? colors.secondary_text : colors.text);
         SetBkMode(dc, TRANSPARENT);
