@@ -6,9 +6,8 @@
 #include <string>
 #include <vector>
 
-// Self-update from GitHub Releases. A release is a tag "vX.Y.Z" with the zip made
-// by package.sh attached as "OpenMirrorPhone-X.Y.Z-win64.zip"; its description is
-// the release notes shown in "Update available" and "What's New".
+// Windows self-update from GitHub Releases. Windows tags are "vX.Y.Z"; Android
+// companion releases use "android-vX.Y.Z" and are ignored by this feed.
 
 struct Release {
     std::string version; // "0.2.0", without the "v"
